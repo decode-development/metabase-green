@@ -14,7 +14,7 @@ No functional changes are made to the core Metabase product. All upstream featur
 |------|-----|----------|
 | Primary brand | `#135756` | Buttons, links, interactive elements |
 | Nav background | `#012D2C` | Top navigation and admin bar |
-| Nav deep | `#001A19` | Inverse/depth depth nav backgrounds |
+| Nav deep | `#001A19` | Inverse/depth nav backgrounds |
 | Accent gold | `#E2B018` | Warnings and highlights |
 | Accent cream | `#FDF0C8` | Warning backgrounds |
 | Subtle background | `#E0E6E6` | Light UI backgrounds |
@@ -34,7 +34,7 @@ The default UI font is **Poppins** (already bundled with Metabase upstream). Cha
 
 ## Versioning
 
-This fork makes cosmetic changes only and tracks upstream Metabase release-for-release. It uses upstream version tags directly (e.g. `v0.61.2`) — there is no independent versioning scheme.
+This fork makes cosmetic changes only and tracks upstream Metabase release-for-release. It uses upstream version tags directly (e.g. `v0.61.2`) — there is no independent versioning scheme. Docker images are published under the same tag, so the image version always corresponds exactly to the underlying Metabase version.
 
 ---
 
@@ -71,3 +71,19 @@ Merges the latest upstream release tag into this fork's `master` daily, keeping 
 **Requires:** A repository secret named `SYNC_TOKEN` — a fine-grained PAT scoped to this repo with Contents, Workflows, and Pull Requests read/write permissions.
 
 **Conflict resolution:** The three branding files above are the most likely to conflict. In each case, keep the Teal values — the upstream values for those specific keys will always be wrong for this fork.
+
+### Docker Publishing — `teal-docker-publish.yml`
+
+Builds the Metabase OSS image from the root `Dockerfile` and publishes it to the GitHub Container Registry (GHCR).
+
+```bash
+docker pull ghcr.io/decode-development/metabase-teal:latest
+docker pull ghcr.io/decode-development/metabase-teal:v0.61.2  # specific version
+```
+
+**Triggers:**
+- Push of an upstream release tag to this fork (clean auto-merge path)
+- Merge of a `sync/upstream-*` PR into master (conflict-resolution path)
+- Manual dispatch — accepts an optional version tag, defaults to the current latest upstream release
+
+> **Note:** The build compiles the full frontend and backend from source and takes approximately 60–90 minutes on a standard GitHub-hosted runner. Layer caching (`type=gha`) reduces this on subsequent builds where the system setup layers are warm.
