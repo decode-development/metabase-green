@@ -66,5 +66,21 @@ Polls [metabase/metabase](https://github.com/metabase/metabase) for new releases
 
 **Conflict resolution:** The three branding files above are the most likely to conflict. In each case, keep the Teal values — the upstream values for those specific keys will always be wrong for this fork.
 
+### Docker Publishing — `teal-docker-publish.yml`
+
+Builds the Metabase OSS image from the root `Dockerfile` and publishes it to the GitHub Container Registry (GHCR) after each successful upstream sync.
+
+```bash
+docker pull ghcr.io/decode-development/metabase-teal:latest
+docker pull ghcr.io/decode-development/metabase-teal:v0.53.2  # specific version
+```
+
+**Triggers:**
+- Push to `master` with a sync commit message (clean auto-merge)
+- Merge of a `sync/upstream-v*` PR into master (conflict resolution)
+- Manual dispatch — accepts an optional version tag, defaults to the current latest upstream release
+
+> **Note:** The build compiles the full frontend and backend from source and takes approximately 60–90 minutes on a standard GitHub-hosted runner. Layer caching (`type=gha`) reduces this significantly on subsequent builds.
+
 
 

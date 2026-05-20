@@ -142,11 +142,12 @@ jobs:
           echo "> \`frontend/src/metabase/ui/colors/constants/themes/dark.ts\`" >> "$BODY_FILE"
           echo "> \`src/metabase/appearance/settings.clj\`" >> "$BODY_FILE"
 
-          gh pr create \
-            --title "chore: sync upstream $TAG (merge conflicts)" \
-            --body-file "$BODY_FILE" \
-            --base master \
-            --head "$BRANCH"
+          gh api repos/$GITHUB_REPOSITORY/pulls \
+            -X POST \
+            -f title="chore: sync upstream $TAG (merge conflicts)" \
+            -f body="$(cat $BODY_FILE)" \
+            -f base=master \
+            -f head="$BRANCH"
 
       - name: Summary
         if: always()
