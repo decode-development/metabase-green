@@ -14,7 +14,7 @@ No functional changes are made to the core Metabase product. All upstream featur
 |------|-----|----------|
 | Primary brand | `#135756` | Buttons, links, interactive elements |
 | Nav background | `#012D2C` | Top navigation and admin bar |
-| Nav deep | `#001A19` | Inverse/depth nav backgrounds |
+| Nav deep | `#001A19` | Inverse/depth depth nav backgrounds |
 | Accent gold | `#E2B018` | Warnings and highlights |
 | Accent cream | `#FDF0C8` | Warning backgrounds |
 | Subtle background | `#E0E6E6` | Light UI backgrounds |
@@ -32,9 +32,15 @@ The default UI font is **Poppins** (already bundled with Metabase upstream). Cha
 
 ---
 
+## Versioning
+
+This fork makes cosmetic changes only and tracks upstream Metabase release-for-release. It uses upstream version tags directly (e.g. `v0.61.2`) — there is no independent versioning scheme.
+
+---
+
 ## Upstream
 
-This fork tracks the official [metabase/metabase](https://github.com/metabase/metabase) OSS releases. Automation for keeping the fork in sync and publishing Docker images is described in the sections below as each workflow is introduced.
+This fork syncs to the latest upstream release tag daily, merging it into `master` so our Teal commits always sit on top of a known-stable release.
 
 ---
 
@@ -50,3 +56,18 @@ Metabase upstream ships ~100 GitHub Actions workflows. On a fork, all of them ar
 
 **Initial setup:** after pushing this repository for the first time, run the workflow manually via:
 > Actions → Enforce Workflow Allowlist → Run workflow
+
+### Upstream Sync — `teal-sync-upstream-release.yml`
+
+Merges the latest upstream release tag into this fork's `master` daily, keeping Teal commits on top of a known-stable release.
+
+| Outcome | Result |
+|---------|--------|
+| Clean merge | Pushed to `master` automatically; release tag pushed to fork, triggering a Docker build |
+| Merge conflicts | Branch `sync/upstream-YYYY-MM-DD` pushed, PR opened for manual resolution |
+
+**Trigger:** Daily at 06:00 UTC, and available as a manual trigger.
+
+**Requires:** A repository secret named `SYNC_TOKEN` — a fine-grained PAT scoped to this repo with Contents, Workflows, and Pull Requests read/write permissions.
+
+**Conflict resolution:** The three branding files above are the most likely to conflict. In each case, keep the Teal values — the upstream values for those specific keys will always be wrong for this fork.
