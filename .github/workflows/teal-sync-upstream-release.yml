@@ -1,0 +1,171 @@
+name: Sync Upstream Metabase Release
+
+# Monitors metabase/metabase for new releases daily and syncs them into master.
+# - Clean merge: pushed to master automatically.
+# - Merge conflicts: branch pushed + PR opened for manual resolution.
+#
+# Requires a secret named SYNC_TOKEN: a classic PAT with repo + workflow scopes.
+# GitHub Apps tokens (GITHUB_TOKEN) cannot push branches containing workflow files.
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily at 06:00 UTC
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  sync:
+    name: Check and sync upstream release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch latest upstream release tag
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          TAG=$(gh api repos/metabase/metabase/releases/latest --jq '.tag_name')
+          if [[ -z "$TAG" || "$TAG" == "null" ]]; then
+            echo "::error::Could not determine latest upstream release tag"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream release: $TAG"
+
+      - name: Add upstream remote and fetch tag
+        run: |
+          git remote add upstream https://github.com/metabase/metabase.git
+          git fetch upstream tag "${{ steps.upstream.outputs.tag }}" --no-tags
+
+      - name: Check sync status
+        id: status
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          BRANCH="sync/upstream-$TAG"
+
+          if git merge-base --is-ancestor "$TAG" HEAD 2>/dev/null; then
+            echo "result=already-synced" >> "$GITHUB_OUTPUT"
+            echo "$TAG is already in master history — nothing to do."
+          elif git ls-remote --exit-code origin "refs/heads/$BRANCH" > /dev/null 2>&1; then
+            echo "result=pr-open" >> "$GITHUB_OUTPUT"
+            echo "Sync branch $BRANCH already exists — PR is likely open."
+          else
+            echo "result=needs-sync" >> "$GITHUB_OUTPUT"
+            echo "$TAG not yet in master — proceeding with sync."
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Attempt merge
+        if: steps.status.outputs.result == 'needs-sync'
+        id: merge
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          BRANCH="${{ steps.status.outputs.branch }}"
+
+          git checkout -b "$BRANCH"
+
+          if git merge "$TAG" -m "chore: sync upstream $TAG" --no-edit; then
+            echo "outcome=clean" >> "$GITHUB_OUTPUT"
+          else
+            # Capture conflicted file list before staging
+            {
+              echo "conflicts<<EOF"
+              git diff --name-only --diff-filter=U
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+
+            # Commit the conflicted state so it is visible on the PR branch
+            git add -A
+            git commit -m "chore: sync upstream $TAG (conflicts — resolve before merging)"
+            echo "outcome=conflicts" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push to master (clean merge)
+        if: steps.status.outputs.result == 'needs-sync' && steps.merge.outputs.outcome == 'clean'
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          BRANCH="${{ steps.status.outputs.branch }}"
+
+          git checkout master
+          git merge "$BRANCH" --ff-only
+          git push origin master
+          echo "::notice::Synced $TAG to master automatically."
+
+      - name: Open conflict-resolution PR
+        if: steps.status.outputs.result == 'needs-sync' && steps.merge.outputs.outcome == 'conflicts'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          BRANCH="${{ steps.status.outputs.branch }}"
+
+          git push origin "$BRANCH"
+
+          BODY_FILE=$(mktemp)
+          echo "## Upstream Sync: $TAG" >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
+          echo "Merge conflicts were detected when syncing the latest upstream release. Manual resolution is required before this PR can be merged into \`master\`." >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
+          echo "### Files with conflicts" >> "$BODY_FILE"
+          echo '```' >> "$BODY_FILE"
+          echo "$CONFLICTS" >> "$BODY_FILE"
+          echo '```' >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
+          echo "### How to resolve" >> "$BODY_FILE"
+          echo '```bash' >> "$BODY_FILE"
+          echo "git fetch origin" >> "$BODY_FILE"
+          echo "git checkout $BRANCH" >> "$BODY_FILE"
+          echo "# Resolve the <<<<<<< markers in each conflicted file, then:" >> "$BODY_FILE"
+          echo "git add -A" >> "$BODY_FILE"
+          echo "git commit --amend --no-edit" >> "$BODY_FILE"
+          echo "git push --force-with-lease origin $BRANCH" >> "$BODY_FILE"
+          echo '```' >> "$BODY_FILE"
+          echo "" >> "$BODY_FILE"
+          echo "> **Tip:** The most likely files to conflict are the Teal branding files:" >> "$BODY_FILE"
+          echo "> \`frontend/src/metabase/ui/colors/constants/themes/light.ts\`" >> "$BODY_FILE"
+          echo "> \`frontend/src/metabase/ui/colors/constants/themes/dark.ts\`" >> "$BODY_FILE"
+          echo "> \`src/metabase/appearance/settings.clj\`" >> "$BODY_FILE"
+
+          gh api repos/$GITHUB_REPOSITORY/pulls \
+            -X POST \
+            -f title="chore: sync upstream $TAG (merge conflicts)" \
+            -f body="$(cat $BODY_FILE)" \
+            -f base=master \
+            -f head="$BRANCH"
+
+      - name: Summary
+        if: always()
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          RESULT="${{ steps.status.outputs.result }}"
+          OUTCOME="${{ steps.merge.outputs.outcome }}"
+
+          if   [[ "$RESULT" == "already-synced" ]]; then
+            echo "### Already up to date" >> "$GITHUB_STEP_SUMMARY"
+            echo "$TAG is already in master — no action taken." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$RESULT" == "pr-open" ]]; then
+            echo "### PR already open" >> "$GITHUB_STEP_SUMMARY"
+            echo "A sync branch for $TAG already exists. Check open PRs." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$OUTCOME" == "clean" ]]; then
+            echo "### Synced automatically" >> "$GITHUB_STEP_SUMMARY"
+            echo "$TAG was merged cleanly into master." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$OUTCOME" == "conflicts" ]]; then
+            echo "### Conflicts — PR opened" >> "$GITHUB_STEP_SUMMARY"
+            echo "$TAG has merge conflicts. A PR has been opened for manual resolution." >> "$GITHUB_STEP_SUMMARY"
+          fi

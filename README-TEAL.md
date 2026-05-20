@@ -51,5 +51,17 @@ Metabase upstream ships ~100 GitHub Actions workflows. On a fork, all of them ar
 **Initial setup:** after pushing this repository for the first time, run the workflow manually via:
 > Actions → Enforce Workflow Allowlist → Run workflow
 
+### Upstream Sync — `teal-sync-upstream-release.yml`
 
+Polls [metabase/metabase](https://github.com/metabase/metabase) for new releases daily and merges them into `master`.
 
+| Outcome | Result |
+|---------|--------|
+| Clean merge | Pushed to `master` automatically |
+| Merge conflicts | Branch `sync/upstream-vX.Y.Z` pushed, PR opened for manual resolution |
+
+**Trigger:** Daily at 06:00 UTC, and available as a manual trigger.
+
+**Requires:** A repository secret named `SYNC_TOKEN` — a fine-grained PAT scoped to this repo with Contents, Workflows, and Pull Requests read/write permissions.
+
+**Conflict resolution:** The three branding files above are the most likely to conflict. In each case, keep the Teal values — the upstream values for those specific keys will always be wrong for this fork.
