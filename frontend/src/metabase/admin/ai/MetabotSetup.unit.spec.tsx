@@ -1434,7 +1434,13 @@ describe("MetabotSetup", () => {
 
     await screen.findByText("Anthropic API key expired or invalid");
 
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/MetabotSetup.unit.spec.tsx
     await confirmDisconnectProvider();
+=======
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Disconnect" }),
+    );
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/MetabotSetup.unit.spec.tsx
 
     await waitFor(() => {
       expect(

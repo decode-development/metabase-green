@@ -240,6 +240,10 @@
   transform)
 
 (t2/define-before-delete :model/Transform [transform]
+<<<<<<< HEAD
+=======
+  (ws.table/delete-orphaned-provisional-table! (:target_table_id transform) (:id transform))
+>>>>>>> v0.61.2
   (when-not mi/*deserializing?*
     (events/publish-event! :event/delete-transform {:id (:id transform)}))
   (search.core/delete! :model/Transform [(str (:id transform))])

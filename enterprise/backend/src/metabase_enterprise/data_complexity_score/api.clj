@@ -96,7 +96,11 @@
                               :metabot-scope (metabot-scope/internal-metabot-scope)))
           stored      (data-complexity-score/record-score! fingerprint "appdb" result)]
       (task.complexity-score/maybe-advance-last-fingerprint! fingerprint result)
+<<<<<<< HEAD
       (m.util/deep-snake-keys (complexity/decorate-with-ratings (or stored result))))
+=======
+      (m.util/deep-snake-keys (or stored result)))
+>>>>>>> v0.61.2
     (finally
       (.set api-scoring-running? false))))
 

@@ -25,6 +25,10 @@ import {
   Collapse,
   Flex,
   Icon,
+<<<<<<< HEAD
+=======
+  type IconName,
+>>>>>>> v0.61.2
   Skeleton,
   Text,
   Tooltip,
@@ -35,7 +39,10 @@ import * as Lib from "metabase-lib";
 import Question from "metabase-lib/v1/Question";
 import type {
   DatasetQuery,
+<<<<<<< HEAD
   IconName,
+=======
+>>>>>>> v0.61.2
   MetabotCodeEdit,
   MetabotCodeEditorBufferContext,
   MetabotSourceFeedback,
@@ -154,7 +161,11 @@ const SourceItem = ({
         to={to}
         href={to}
       >
+<<<<<<< HEAD
         <Flex direction="column" miw={0} maw="100%">
+=======
+        <Flex direction="column" gap="0.25rem" miw={0} maw="100%">
+>>>>>>> v0.61.2
           <Flex gap="sm" align="center" miw={0} maw="100%">
             <Icon
               name={iconName}
@@ -171,7 +182,11 @@ const SourceItem = ({
                 overflow: "hidden",
                 fontSize: "0.75rem",
                 fontWeight: 700,
+<<<<<<< HEAD
                 lineHeight: 1.5,
+=======
+                lineHeight: 1,
+>>>>>>> v0.61.2
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
@@ -204,9 +219,15 @@ const SourceItem = ({
                     miw={0}
                     c="text-secondary"
                     style={{
+<<<<<<< HEAD
                       overflow: "hidden",
                       fontSize: "0.75rem",
                       lineHeight: 1.5,
+=======
+                      overflowX: "hidden",
+                      fontSize: "0.75rem",
+                      lineHeight: 1,
+>>>>>>> v0.61.2
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}

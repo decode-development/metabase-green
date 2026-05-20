@@ -1132,6 +1132,7 @@
             (is (= "Transforms" (:name (first dirty-items))))
             (is (= "delete" (:sync_status (first dirty-items))))))))))
 
+<<<<<<< HEAD
 (deftest settings-collections-not-marked-synced-when-settings-validation-fails-test
   (testing "PUT /api/ee/remote-sync/settings does not mark collections as synced when settings validation fails"
     (mt/with-temporary-setting-values [remote-sync-type :read-write]
@@ -1145,6 +1146,8 @@
                                  :collections       {coll-id true}})
           (is (false? (:is_remote_synced (t2/select-one :model/Collection :id coll-id)))))))))
 
+=======
+>>>>>>> v0.61.2
 ;; ---------- API-level guard sweep --------------------------------------------------------------
 ;;
 ;; Boundary tests verifying that every mutating remote-sync HTTP endpoint surfaces the guard's

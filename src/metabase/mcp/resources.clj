@@ -1,6 +1,10 @@
 (ns metabase.mcp.resources
   "MCP resource registry. Resources let clients fetch supplementary content (docs,
+<<<<<<< HEAD
    reference material) and UI resources by URI without inflating tool descriptions.
+=======
+   reference material) by URI without inflating tool descriptions.
+>>>>>>> v0.61.2
 
    Each entry in the registry is a map with `:uri`, `:name`, `:description`,
    `:mimeType`, an optional `:scope`, and a `:render-fn` that returns the textual
@@ -11,6 +15,7 @@
   (:require
    [clojure.java.io :as io]
    [metabase.mcp.scope :as mcp.scope]
+<<<<<<< HEAD
    [metabase.mcp.session :as mcp.session]
    [metabase.system.core :as system]
    [metabase.util.json :as json]
@@ -85,6 +90,14 @@
     {:ui {:csp {:connectDomains  [url]
                 :resourceDomains [url]
                 :frameDomains    [url]}}}))
+=======
+   [metabase.util.malli :as mu]))
+
+(set! *warn-on-reflection* true)
+
+;; Single map keyed by URI; `register-resource!` overwrites so REPL reload is idempotent.
+(defonce ^:private registry (atom (sorted-map)))
+>>>>>>> v0.61.2
 
 (mu/defn register-resource!
   "Register an MCP resource. Overwrites any existing entry with the same `:uri`."
@@ -96,6 +109,7 @@
                 [:mimeType {:optional true} :string]
                 [:scope    {:optional true} [:maybe :string]]]]
   (let [resource (update resource :mimeType #(or % "text/markdown"))]
+<<<<<<< HEAD
     (swap! registry assoc-in [:uri->resource (:uri resource)] resource)
     resource))
 
@@ -138,11 +152,17 @@
   []
   (vals (:tools @registry)))
 
+=======
+    (swap! registry assoc (:uri resource) resource)
+    resource))
+
+>>>>>>> v0.61.2
 (defn list-resources
   "Return the MCP `resources/list` payload, filtered by `token-scopes`."
   [token-scopes]
   {:resources (into []
                     (comp (filter #(mcp.scope/public-or-matches? token-scopes (:scope %)))
+<<<<<<< HEAD
                           (map (fn [resource]
                                  (cond-> (select-keys resource [:uri :name :description :mimeType])
                                    (:ui? resource) (assoc :_meta (ui-csp-meta))))))
@@ -157,11 +177,16 @@
       :ok
       :scope-denied)
     :not-found))
+=======
+                          (map #(select-keys % [:uri :name :description :mimeType])))
+                    (vals @registry))})
+>>>>>>> v0.61.2
 
 (defn read-resource
   "Read a registered resource by URI, gated by `token-scopes`. Returns one of
    `{:status :ok :contents [...]}`, `{:status :scope-denied}`, or
    `{:status :not-found}`. Single registry lookup keeps the gate atomic with the
+<<<<<<< HEAD
    render, so callers cannot bypass the scope check."
   [uri token-scopes opts]
   (if-let [{:keys [render-fn scope ui?] :as resource} (get-in @registry [:uri->resource uri])]
@@ -170,6 +195,16 @@
        :contents [(cond-> (select-keys resource [:uri :mimeType])
                     true (assoc :text (render-fn opts))
                     ui?  (assoc :_meta (ui-csp-meta)))]}
+=======
+   render — no race window where the registry could change between an access
+   check and the read, and no way for direct callers to bypass the scope check."
+  [uri token-scopes opts]
+  (if-let [{:keys [render-fn scope] :as resource} (get @registry uri)]
+    (if (mcp.scope/public-or-matches? token-scopes scope)
+      {:status   :ok
+       :contents [(-> (select-keys resource [:uri :mimeType])
+                      (assoc :text (render-fn opts)))]}
+>>>>>>> v0.61.2
       {:status :scope-denied})
     {:status :not-found}))
 
@@ -177,7 +212,11 @@
 
 (defn classpath-text-resource
   "Build a `:render-fn` that returns the contents of `path` on the classpath.
+<<<<<<< HEAD
    Throws on registration if the file is missing, surfacing a clear error at boot
+=======
+   Throws on registration if the file is missing — surfaces a clear error at boot
+>>>>>>> v0.61.2
    rather than the first `resources/read` call."
   [path]
   (let [url (io/resource path)]
@@ -199,6 +238,7 @@
                     "ref shapes, joins, metric/date handling).")
   :mimeType    "text/markdown"
   :render-fn   (classpath-text-resource "metabase/agent_api/construct_query.md")})
+<<<<<<< HEAD
 
 (register-ui-resource!
  :visualize-query
@@ -279,3 +319,5 @@
                       :isError true})
                    {:content [{:type "text" :text "No drill-through found for that handle."}]
                     :isError true}))})
+=======
+>>>>>>> v0.61.2

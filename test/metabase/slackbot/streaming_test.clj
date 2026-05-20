@@ -188,6 +188,7 @@
           {:ai-text "Hello!"}
           (fn [{:keys [stop-stream-calls]}]
             (mt/with-temporary-setting-values [llm-metabot-provider "metabase/anthropic/claude-sonnet-4-6"]
+<<<<<<< HEAD
               (mt/with-dynamic-fn-redefs [premium-features/token-status
                                           (constantly nil)
                                           metabot.persistence/start-turn!
@@ -196,6 +197,16 @@
                                             {:assistant-msg-id 1 :assistant-external-id "ext"})
                                           metabot.persistence/finalize-assistant-turn!
                                           (fn [& _] nil)]
+=======
+              (with-redefs [premium-features/token-status
+                            (constantly nil)
+                            metabot.persistence/start-turn!
+                            (fn [_conv-id _profile-id _user-message & {:as opts}]
+                              (swap! start-opts conj opts)
+                              {:assistant-msg-id 1 :assistant-external-id "ext"})
+                            metabot.persistence/finalize-assistant-turn!
+                            (fn [& _] nil)]
+>>>>>>> v0.61.2
                 (mt/client :post 200 "metabot/slack/events"
                            (tu/slack-request-options event-body)
                            event-body)
@@ -214,6 +225,7 @@
         (tu/with-slackbot-mocks
           {:ai-text "Hello!"}
           (fn [_ctx]
+<<<<<<< HEAD
             (mt/with-dynamic-fn-redefs [metabot.persistence/start-turn!
                                         (fn [_conv-id _profile-id _user-message & {:as opts}]
                                           (deliver stored opts)
@@ -221,6 +233,15 @@
                           ;; Force setup to throw *after* start-turn! has run.
                                         slackbot.persistence/message-history
                                         (fn [& _] (throw (ex-info "boom" {})))]
+=======
+            (with-redefs [metabot.persistence/start-turn!
+                          (fn [_conv-id _profile-id _user-message & {:as opts}]
+                            (deliver stored opts)
+                            {:assistant-msg-id 1 :assistant-external-id "ext"})
+                          ;; Force setup to throw *after* start-turn! has run.
+                          slackbot.persistence/message-history
+                          (fn [& _] (throw (ex-info "boom" {})))]
+>>>>>>> v0.61.2
               (mt/client :post 200 "metabot/slack/events"
                          (tu/slack-request-options event-body)
                          event-body)
@@ -241,12 +262,21 @@
                   {:ai-text "Hello!"}
                   (fn [{:keys [stop-stream-calls]}]
                     (mt/with-temporary-setting-values [analytics-pii-retention-enabled flag-on?]
+<<<<<<< HEAD
                       (mt/with-dynamic-fn-redefs [metabot.persistence/start-turn!
                                                   (fn [_conv-id _profile-id _user-message & {:as opts}]
                                                     (swap! start-opts conj opts)
                                                     {:assistant-msg-id 1 :assistant-external-id "ext"})
                                                   metabot.persistence/finalize-assistant-turn!
                                                   (fn [& _] nil)]
+=======
+                      (with-redefs [metabot.persistence/start-turn!
+                                    (fn [_conv-id _profile-id _user-message & {:as opts}]
+                                      (swap! start-opts conj opts)
+                                      {:assistant-msg-id 1 :assistant-external-id "ext"})
+                                    metabot.persistence/finalize-assistant-turn!
+                                    (fn [& _] nil)]
+>>>>>>> v0.61.2
                         (mt/client :post 200 "metabot/slack/events"
                                    (tu/slack-request-options event-body)
                                    event-body)
@@ -268,12 +298,21 @@
           {:ai-text "Hello!"}
           (fn [{:keys [stop-stream-calls]}]
             (mt/with-temporary-setting-values [llm-metabot-provider "anthropic/claude-haiku-4-5"]
+<<<<<<< HEAD
               (mt/with-dynamic-fn-redefs [metabot.persistence/start-turn!
                                           (fn [_conv-id _profile-id _user-message & {:as opts}]
                                             (swap! start-opts conj opts)
                                             {:assistant-msg-id 1 :assistant-external-id "ext"})
                                           metabot.persistence/finalize-assistant-turn!
                                           (fn [& _] nil)]
+=======
+              (with-redefs [metabot.persistence/start-turn!
+                            (fn [_conv-id _profile-id _user-message & {:as opts}]
+                              (swap! start-opts conj opts)
+                              {:assistant-msg-id 1 :assistant-external-id "ext"})
+                            metabot.persistence/finalize-assistant-turn!
+                            (fn [& _] nil)]
+>>>>>>> v0.61.2
                 (mt/client :post 200 "metabot/slack/events"
                            (tu/slack-request-options event-body)
                            event-body)

@@ -10,7 +10,10 @@
    [metabase.api.macros.scope :as scope]
    [metabase.api.open-api :as open-api]
    [metabase.mcp.resources :as mcp.resources]
+<<<<<<< HEAD
    [metabase.mcp.session :as mcp.session]
+=======
+>>>>>>> v0.61.2
    [metabase.mcp.tools :as mcp.tools]
    [metabase.mcp.validation :as mcp.validation]
    [metabase.oauth-server.core :as oauth-server]
@@ -92,11 +95,26 @@
           (:not-found :scope-denied) (jsonrpc-error id -32602 "Resource not found")
           :ok                        (jsonrpc-response id {:contents (:contents result)}))))))
 
+(defn- handle-resources-list [id _params token-scopes]
+  (jsonrpc-response id (mcp.resources/list-resources token-scopes)))
+
+(defn- handle-resources-read [id params token-scopes]
+  (let [uri (:uri params)]
+    (if (or (not (string? uri)) (str/blank? uri))
+      (jsonrpc-error id -32602 "Missing required parameter: uri")
+      (let [{:keys [status contents]} (mcp.resources/read-resource uri token-scopes {})]
+        ;; :not-found and :scope-denied collapse to the same generic error so we
+        ;; don't leak resource existence to callers without scope.
+        (case status
+          (:not-found :scope-denied) (jsonrpc-error id -32602 "Resource not found")
+          :ok                        (jsonrpc-response id {:contents contents}))))))
+
 (defn- handle-ping [id _params]
   (jsonrpc-response id {}))
 
 (defn- dispatch-request
   "Dispatch a single JSON-RPC request. Returns a response map or nil for notifications."
+<<<<<<< HEAD
   [{:keys [id method params] :as _msg} session-id token-scopes]
   (try
     (case method
@@ -112,6 +130,26 @@
     (catch Throwable e
       (log/error e "Error dispatching JSON-RPC method" method)
       (jsonrpc-error id -32603 (or (ex-message e) "Internal error")))))
+=======
+  [msg _session-id token-scopes]
+  (let [id     (:id msg)
+        method (:method msg)
+        params (:params msg)]
+    (try
+      (case method
+        "notifications/initialized" nil
+        "tools/list"                (handle-tools-list id params token-scopes)
+        "tools/call"                (handle-tools-call id params token-scopes)
+        "resources/list"            (handle-resources-list id params token-scopes)
+        "resources/read"            (handle-resources-read id params token-scopes)
+        "ping"                      (handle-ping id params)
+        (if id
+          (jsonrpc-error id -32601 (str "Method not found: " method))
+          nil))
+      (catch Throwable e
+        (log/error e "Error dispatching JSON-RPC method" method)
+        (jsonrpc-error id -32603 (or (ex-message e) "Internal error"))))))
+>>>>>>> v0.61.2
 
 ;;; ----------------------------------------------------- SSE ------------------------------------------------------
 

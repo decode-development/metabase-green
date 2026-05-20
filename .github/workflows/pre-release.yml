@@ -223,7 +223,11 @@ jobs:
           CYPRESS_BROWSER: ${{ steps.cypress-prep.outputs.chrome-path }}
         run: |
           node e2e/runner/run_cypress_ci.js e2e \
+<<<<<<< HEAD
             $CYPRESS_GREP_FLAG grepTags="@prerelease+-@EE" \
+=======
+            --expose grepTags="@prerelease+-@EE" \
+>>>>>>> v0.61.2
             --spec './e2e/test/scenarios/**/*.cy.spec.(js|ts)'
 
       - name: Run a few important EE Cypress tests as sanity check
@@ -232,7 +236,11 @@ jobs:
           CYPRESS_BROWSER: ${{ steps.cypress-prep.outputs.chrome-path }}
         run: |
           node e2e/runner/run_cypress_ci.js e2e \
+<<<<<<< HEAD
             $CYPRESS_GREP_FLAG grepTags="@prerelease+-@OSS" \
+=======
+            --expose grepTags="@prerelease+-@OSS" \
+>>>>>>> v0.61.2
             --spec './e2e/test/scenarios/**/*.cy.spec.(js|ts)'
 
       - name: Upload Cypress Artifacts upon failure

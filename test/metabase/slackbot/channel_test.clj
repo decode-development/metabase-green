@@ -9,11 +9,19 @@
 (deftest channel-response-passes-slack-metadata-for-deep-linking-test
   (let [request-opts  (atom nil)
         backfill-args (atom nil)]
+<<<<<<< HEAD
     (mt/with-dynamic-fn-redefs [slackbot.client/set-status (constantly {:ok true})
                                 slackbot.client/post-thread-reply (constantly {:ok true :ts "1700000000.000002"})
                                 metabot.persistence/set-response-slack-msg-id!
                                 (fn [msg-id slack-msg-id]
                                   (reset! backfill-args {:msg-id msg-id :slack-msg-id slack-msg-id}))]
+=======
+    (with-redefs [slackbot.client/set-status (constantly {:ok true})
+                  slackbot.client/post-thread-reply (constantly {:ok true :ts "1700000000.000002"})
+                  metabot.persistence/set-response-slack-msg-id!
+                  (fn [msg-id slack-msg-id]
+                    (reset! backfill-args {:msg-id msg-id :slack-msg-id slack-msg-id}))]
+>>>>>>> v0.61.2
       (slackbot.channel/send-channel-response
        {}
        {:ts "1700000000.000001"}

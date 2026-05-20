@@ -276,8 +276,20 @@
 ;;;
 ;;; Tangentially-related nonsense not used by the middleware
 ;;;
+<<<<<<< HEAD
 ;;; TODO (Cam 2026-05-14) -- move this into Lib or somewhere else since this is just a raw MBQL transformation that
 ;;; only seems to be used by driver-specific parameter compilation code
+=======
+
+;;; TODO (Cam 8/22/25) FIXME: This is used in exactly one place: the SQL QP... so why does it live in a QP middleware
+;;; namespace? Nobody knows.
+(defn unwrap-value-literal
+  "Extract value literal from `:value` form or returns form as is if not a `:value` form."
+  [maybe-value-form]
+  (match/match-one maybe-value-form
+    [:value x & _] x
+    _              maybe-value-form))
+>>>>>>> v0.61.2
 
 (defn- type-info-no-query
   "This is like [[type-info*]] but specifically for supporting the legacy/deprecated [[wrap-value-literals-in-mbql]]

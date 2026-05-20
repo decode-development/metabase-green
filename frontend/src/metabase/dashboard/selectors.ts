@@ -46,7 +46,10 @@ import type {
   DashboardId,
   DashboardParameterMapping,
   DashboardTabId,
+<<<<<<< HEAD
   EmbeddingParameterVisibility,
+=======
+>>>>>>> v0.61.2
   ParameterId,
   VirtualCard,
 } from "metabase-types/api";

@@ -244,9 +244,17 @@
   (api/check-400 (= (settings/remote-sync-type) :read-write) "Stash is only allowed when remote-sync-type is set to 'read-write'")
   (api/check-400 (source/source-from-settings) "Source not configured")
   (try
+<<<<<<< HEAD
     (let [user-id       api/*current-user-id*
           {task-id :id} (impl/stash! new-branch message
                                      :on-success #(publish-sync-event! :event/remote-sync-stash %1 new-branch user-id))]
+=======
+    (let [{task-id :id :as task} (impl/stash! new-branch message)]
+      (events/publish-event! :event/remote-sync-stash
+                             {:object task
+                              :details {:branch new-branch}
+                              :user-id api/*current-user-id*})
+>>>>>>> v0.61.2
       {:status "success"
        :message (str "Stashing to " new-branch)
        :task_id task-id})

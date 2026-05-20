@@ -274,6 +274,7 @@ export type MetabotSourceFeedback = {
   positive: boolean;
 };
 
+<<<<<<< HEAD
 /**
  * Feedback payload for MCP Apps visualization results.
  *
@@ -313,6 +314,8 @@ export type SubmitMcpAppsFeedbackRequest = {
   payload: McpAppsFeedback;
 };
 
+=======
+>>>>>>> v0.61.2
 /* Metabot v3 - Entity Types */
 
 export type MetabotId = number;

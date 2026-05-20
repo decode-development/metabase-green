@@ -762,10 +762,17 @@
   (testing "feedback action opens modal with correct private_metadata"
     (let [conversation-id "conv-123"
           open-view-calls (atom [])]
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [slackbot/slack-id->user-id (constantly (mt/user->id :rasta))
                                   slackbot.client/open-view  (fn [_ params]
                                                                (swap! open-view-calls conj params)
                                                                {:ok true})]
+=======
+      (with-redefs [slackbot/slack-id->user-id (constantly (mt/user->id :rasta))
+                    slackbot.client/open-view  (fn [_ params]
+                                                 (swap! open-view-calls conj params)
+                                                 {:ok true})]
+>>>>>>> v0.61.2
         (let [action {:action_id "metabot_feedback"
                       :value     (json/encode {:conversation_id conversation-id :positive true})}]
           (#'slackbot/handle-feedback-action
@@ -807,10 +814,17 @@
 (deftest handle-feedback-action-unauthenticated-test
   (testing "feedback action is silently skipped for unauthenticated user"
     (let [open-view-calls (atom [])]
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [slackbot/slack-id->user-id (constantly nil)
                                   slackbot.client/open-view  (fn [_ params]
                                                                (swap! open-view-calls conj params)
                                                                {:ok true})]
+=======
+      (with-redefs [slackbot/slack-id->user-id (constantly nil)
+                    slackbot.client/open-view  (fn [_ params]
+                                                 (swap! open-view-calls conj params)
+                                                 {:ok true})]
+>>>>>>> v0.61.2
         (let [action {:action_id "metabot_feedback"
                       :value     (json/encode {:conversation_id "conv-456" :positive false})}
               result (#'slackbot/handle-feedback-action

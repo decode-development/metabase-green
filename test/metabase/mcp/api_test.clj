@@ -9,7 +9,10 @@
    [metabase.lib.metadata :as lib.metadata]
    [metabase.mcp.api :as mcp.api]
    [metabase.mcp.resources :as mcp.resources]
+<<<<<<< HEAD
    [metabase.mcp.session :as mcp.session]
+=======
+>>>>>>> v0.61.2
    [metabase.mcp.settings :as mcp.settings]
    [metabase.mcp.tools :as mcp.tools]
    [metabase.oauth-server.core :as oauth-server]
@@ -504,17 +507,27 @@
 
 (def ^:private smoke-tested-tools
   "Tools exercised by `tools-call-smoke-test`. New tools must be added here (and
+<<<<<<< HEAD
    below) — the test compares this set against the Agent API-backed tools and
    fails when they diverge, ensuring no Agent API tool ships without a basic
    invocation check."
+=======
+   below) — the test compares this set against `mcp.tools/list-tools` and fails
+   when they diverge, ensuring no tool ships without a basic invocation check."
+>>>>>>> v0.61.2
   #{"get_table" "get_table_field_values" "get_metric" "get_metric_field_values"
     "search" "construct_query" "query" "execute_query"
     "create_question" "create_dashboard"})
 
 (deftest tools-call-smoke-test
+<<<<<<< HEAD
   (testing "every Agent API-backed tool is exercised by the smoke test"
     (is (= (apply disj (set (map :name (mcp.tools/list-tools nil)))
                   ["visualize_query" "render_drill_through"])
+=======
+  (testing "every registered tool is exercised by the smoke test"
+    (is (= (set (map :name (mcp.tools/list-tools nil)))
+>>>>>>> v0.61.2
            smoke-tested-tools)
         "Add the missing tool to `smoke-tested-tools` and the call sequence below."))
   (testing "every tool returns a successful response with valid parameters"
@@ -543,18 +556,30 @@
                   ;; Query construction + execution
                   construct-data (call-tool session-id "construct_query"
                                             {:source     {:type "table" :id orders-id}
+<<<<<<< HEAD
                                              :operations [["limit" 5]]
                                              :prompt     "show 5 orders"})
+=======
+                                             :operations [["limit" 5]]})
+>>>>>>> v0.61.2
                   _              (call-tool session-id "query"
                                             {:source     {:type "table" :id orders-id}
                                              :operations [["limit" 5]]})
                   _              (call-tool session-id "execute_query"
+<<<<<<< HEAD
                                             {:query_handle (:query_handle construct-data)})
+=======
+                                            {:query (:query construct-data)})
+>>>>>>> v0.61.2
                   ;; Write tools — record IDs as soon as they're known so the `finally` block
                   ;; can clean up even if a later step throws.
                   question-data  (call-tool session-id "create_question"
                                             {:name  "Smoke Question"
+<<<<<<< HEAD
                                              :query (mcp.session/read-handle session-id (:query_handle construct-data))})
+=======
+                                             :query (:query construct-data)})
+>>>>>>> v0.61.2
                   _              (reset! question-id (:id question-data))
                   dash-data      (call-tool session-id "create_dashboard"
                                             {:name "Smoke Dashboard"})]
@@ -563,6 +588,7 @@
               (when-let [qid @question-id] (t2/delete! :model/Card :id qid))
               (when-let [did @dash-id]     (t2/delete! :model/Dashboard :id did)))))))))
 
+<<<<<<< HEAD
 (deftest tools-call-visualize-query-direct-test
   (testing "visualize_query returns UI structured content"
     (let [result (mcp.tools/call-tool nil nil "visualize_query" {:query "card__1"})]
@@ -571,6 +597,8 @@
                :structuredContent {:query "card__1"}}
               result)))))
 
+=======
+>>>>>>> v0.61.2
 (deftest tools-call-execute-query-test
   (testing "execute_query returns a streaming response captured as MCP text content"
     (let [streamed? (atom false)
@@ -798,10 +826,13 @@
 
 (def ^:private scoped-test-uri "test://mcp/api-test/scoped")
 
+<<<<<<< HEAD
 (defn- dispatch-initialized-request [msg token-scopes]
   (let [session-id (str (random-uuid))]
     (#'mcp.api/dispatch-request msg session-id token-scopes)))
 
+=======
+>>>>>>> v0.61.2
 (defn- with-scoped-test-resource! [f]
   (let [registry @#'mcp.resources/registry
         snapshot @registry]
@@ -817,12 +848,22 @@
       (finally
         (reset! registry snapshot)))))
 
+<<<<<<< HEAD
 (deftest ui-resource-read-not-found-test
   (testing "resources/read returns -32602 \"Resource not found\" when caller lacks the required scope"
     (with-scoped-test-resource!
       (fn []
         (let [response (dispatch-initialized-request
                         (jsonrpc-request "resources/read" {:uri scoped-test-uri})
+=======
+(deftest resources-read-scope-denied-test
+  (testing "resources/read returns -32602 \"Resource not found\" when caller lacks the required scope"
+    (with-scoped-test-resource!
+      (fn []
+        (let [response (#'mcp.api/dispatch-request
+                        (jsonrpc-request "resources/read" {:uri scoped-test-uri})
+                        "session-id"
+>>>>>>> v0.61.2
                         #{"agent:other"})]
           (is (=? {:jsonrpc "2.0"
                    :id      1
@@ -832,8 +873,14 @@
   (testing "resources/read for a scoped resource succeeds when the caller has a matching scope"
     (with-scoped-test-resource!
       (fn []
+<<<<<<< HEAD
         (let [response (dispatch-initialized-request
                         (jsonrpc-request "resources/read" {:uri scoped-test-uri})
+=======
+        (let [response (#'mcp.api/dispatch-request
+                        (jsonrpc-request "resources/read" {:uri scoped-test-uri})
+                        "session-id"
+>>>>>>> v0.61.2
                         #{"agent:search"})]
           (is (=? {:result {:contents [{:uri  scoped-test-uri
                                         :text "secret body"}]}}

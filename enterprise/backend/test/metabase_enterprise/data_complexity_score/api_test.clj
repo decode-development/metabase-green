@@ -108,7 +108,11 @@
         (let [resp (mt/user-http-request :crowberto :get 200 endpoint)]
           (is (= "api-test-fp" @captured-fingerprint)
               "API passes the cron fingerprint through; source=\"appdb\" defaulting is covered by latest-score-filters-by-source-test")
+<<<<<<< HEAD
           (is (= (expected-response (with-sample-calculated-at sample-score)) resp))
+=======
+          (is (= (m.util/deep-snake-keys (with-sample-calculated-at sample-score)) resp))
+>>>>>>> v0.61.2
           (is (contains? (:meta resp) :formula_version))
           (is (= sample-calculated-at (get-in resp [:meta :calculated_at])))
           (is (not (contains? (:meta resp) :formula-version)))

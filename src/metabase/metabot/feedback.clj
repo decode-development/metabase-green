@@ -1,20 +1,19 @@
 (ns metabase.metabot.feedback
-  "Local persistence of Metabot feedback, plus a Harbormaster submission path."
+  "Persistence of Metabot feedback."
   (:require
-   [clj-http.client :as http]
-   [clojure.string :as str]
    [metabase.api.common :as api]
    [metabase.app-db.core :as app-db]
+<<<<<<< HEAD
    [metabase.config.core :as config]
    [metabase.metabot.persistence :as metabot.persistence]
+=======
+>>>>>>> v0.61.2
    [metabase.models.interface :as mi]
-   [metabase.premium-features.core :as premium-features]
-   [metabase.store-api.core :as store-api]
-   [metabase.util.json :as json]
    [toucan2.core :as t2]))
 
 (set! *warn-on-reflection* true)
 
+<<<<<<< HEAD
 (def ^:private harbormaster-conn-timeout-ms
   2000)
 
@@ -67,6 +66,8 @@
           :submitter_user_id submitter-user-id
           :is_admin (boolean (t2/select-one-fn :is_superuser :model/User :id submitter-user-id)))))
 
+=======
+>>>>>>> v0.61.2
 (defn- resolve-rated-message
   "Return the `metabot_message` row (`:id` + `:conversation_id`) identified by
   `external-id`, plus the enclosing `:model/MetabotConversation` as `:conversation`.

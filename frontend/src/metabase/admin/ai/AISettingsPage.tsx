@@ -10,7 +10,10 @@ import { useAdminSetting } from "metabase/api/utils";
 import { ExternalLink } from "metabase/common/components/ExternalLink";
 import { Link } from "metabase/common/components/Link";
 import { LoadingAndErrorWrapper } from "metabase/common/components/LoadingAndErrorWrapper";
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/AISettingsPage.tsx
 import { UpsellGem } from "metabase/common/components/upsells/components/UpsellGem";
+=======
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/AISettingsPage.tsx
 import { useDocsUrl, useSetting } from "metabase/common/hooks";
 import { FIXED_METABOT_IDS } from "metabase/metabot/constants";
 import {
@@ -55,6 +58,12 @@ export function AISettingsPage() {
 
   const selectedMetabotId = getSelectedMetabotId(
     query?.[METABOT_ID_QUERY_PARAM],
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/AISettingsPage.tsx
+=======
+    {
+      hasEmbedding,
+    },
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/AISettingsPage.tsx
   );
 
   const handleAiFeaturesEnabledChange = async (checked: boolean) => {
@@ -123,6 +132,10 @@ function AgentApiSettingsSection({ disabled }: { disabled: boolean }) {
   } = useAdminSetting("agent-api-enabled?");
   const isAgentApiEnabled = agentApiEnabledValue !== false;
 
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/AISettingsPage.tsx
+=======
+  // eslint-disable-next-line metabase/no-unconditional-metabase-links-render -- Admin settings
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/AISettingsPage.tsx
   const { url: agentApiDocsUrl } = useDocsUrl("ai/agent-api");
 
   const handleAgentApiChange = async (checked: boolean) => {
@@ -158,6 +171,7 @@ function MetabotSettingsSection({
   selectedMetabotId: MetabotTabId;
 }) {
   const { data, isLoading, error } = useListMetabotsQuery();
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/AISettingsPage.tsx
   const shouldShowUpsell =
     !hasEmbedding && selectedMetabotId === FIXED_METABOT_IDS.EMBEDDED;
   const activeMetabot = !shouldShowUpsell
@@ -198,6 +212,44 @@ function MetabotSettingsSection({
         <MetabotSettingsPanel metabot={activeMetabot} />
       ) : shouldShowUpsell ? (
         <EmbeddedMetabotUpsell />
+=======
+  const activeMetabot = data?.items.find((m) => m.id === selectedMetabotId);
+  const showTabs = hasEmbedding;
+
+  return (
+    <SettingsSection id={id} title={t`Metabot settings`}>
+      {showTabs && (
+        <Tabs value={String(selectedMetabotId)}>
+          <Tabs.List>
+            <Tabs.Tab
+              renderRoot={(props) => (
+                <Link
+                  {...props}
+                  to={getMetabotTabPath(FIXED_METABOT_IDS.DEFAULT)}
+                />
+              )}
+              value={String(FIXED_METABOT_IDS.DEFAULT)}
+            >
+              {t`Internal`}
+            </Tabs.Tab>
+            <Tabs.Tab
+              renderRoot={(props) => (
+                <Link
+                  {...props}
+                  to={getMetabotTabPath(FIXED_METABOT_IDS.EMBEDDED)}
+                />
+              )}
+              value={String(FIXED_METABOT_IDS.EMBEDDED)}
+            >
+              {t`Embedded`}
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+      )}
+
+      {activeMetabot ? (
+        <MetabotSettingsPanel metabot={activeMetabot} />
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/AISettingsPage.tsx
       ) : (
         <LoadingAndErrorWrapper
           loading={isLoading}
@@ -265,8 +317,20 @@ function DisabledSection({
   );
 }
 
+<<<<<<< HEAD:frontend/src/metabase/admin/ai/AISettingsPage.tsx
 function getSelectedMetabotId(metabotId: string | undefined): MetabotTabId {
   if (metabotId === String(FIXED_METABOT_IDS.EMBEDDED)) {
+=======
+function getSelectedMetabotId(
+  metabotId: string | undefined,
+  {
+    hasEmbedding,
+  }: {
+    hasEmbedding: boolean;
+  },
+): MetabotTabId {
+  if (metabotId === String(FIXED_METABOT_IDS.EMBEDDED) && hasEmbedding) {
+>>>>>>> v0.61.2:frontend/src/metabase/metabot/components/MetabotAdmin/AISettingsPage.tsx
     return FIXED_METABOT_IDS.EMBEDDED;
   }
 

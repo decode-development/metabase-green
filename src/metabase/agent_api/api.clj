@@ -565,7 +565,15 @@
   for the full program syntax."
   {:scope metabot/agent-query-construct
    :tool  {:name "construct_query"
+<<<<<<< HEAD
            :description construct-query-tool-description
+=======
+           :description (str "Construct a Metabase query from a structured program with `source` and "
+                             "`operations`. Returns an opaque query string for execute_query. "
+                             "See the `metabase://docs/construct-query.md` resource for the full "
+                             "program syntax (sources, operations, operator forms, worked examples, "
+                             "and pitfalls).")
+>>>>>>> v0.61.2
            :annotations {:read-only? true :idempotent? true}}}
   [_route-params
    _query-params
@@ -757,11 +765,15 @@
   Standard userspace query limits are enforced (2000 rows for simple queries, 10000 for aggregated)."
   {:scope metabot/agent-query-execute
    :tool  {:name "execute_query"
+<<<<<<< HEAD
            :description (str "Execute a previously constructed query and return raw results with column metadata, "
                              "row count, and execution time. Use this when the user explicitly asks for raw data, "
                              "rows, columns, counts, metadata, or programmatic query results. If the user asks to "
                              "show, display, visualize, plot, chart, or present the result, use visualize_query "
                              "instead.")
+=======
+           :description "Execute a previously constructed query and return the results with column metadata, row count, and execution time."
+>>>>>>> v0.61.2
            :annotations {:read-only? true :idempotent? true}}}
   [_route-params
    _query-params

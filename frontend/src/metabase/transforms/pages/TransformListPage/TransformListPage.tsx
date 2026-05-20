@@ -27,6 +27,10 @@ import { PageContainer } from "metabase/data-studio/common/components/PageContai
 import { PaneHeader } from "metabase/data-studio/common/components/PaneHeader";
 import { PLUGIN_REPLACEMENT, PLUGIN_TRANSFORMS_PYTHON } from "metabase/plugins";
 import { useSelector } from "metabase/redux";
+<<<<<<< HEAD
+=======
+import { getMetadata } from "metabase/selectors/metadata";
+>>>>>>> v0.61.2
 import { LockedTransformsBanner } from "metabase/transforms/components/LockedTransformsBanner/LockedTransformsBanner";
 import { useTransformPermissions } from "metabase/transforms/hooks/use-transform-permissions";
 import { getShouldShowPythonTransformsUpsell } from "metabase/transforms/selectors";

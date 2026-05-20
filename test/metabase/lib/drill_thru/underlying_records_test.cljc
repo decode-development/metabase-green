@@ -785,6 +785,7 @@
                (map #(:long-display-name (lib/display-info query' %))
                     (lib/filters query'))))))))
 
+<<<<<<< HEAD
 (deftest ^:parallel underlying-records-month-breakout-with-tz-offset-test
   (testing "drilling on a `month`-bucketed cell whose value carries a non-UTC offset filters the right month (#71147)"
     ;; The bug: a pivot cell for February stamped as Berlin local time ("2024-02-01T00:00:00+01:00") was
@@ -830,6 +831,8 @@
                                         14]]}]}
                   (lib/drill-thru query drill))))))))
 
+=======
+>>>>>>> v0.61.2
 (deftest ^:parallel double-summarize-then-drill-twice-test
   (testing "drilling twice on a double-summarize query keeps the correct date filter (#72937)"
     (let [;; First summarize: max(subtotal) by day(created-at), product-id.

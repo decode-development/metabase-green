@@ -103,6 +103,7 @@
       (is (=? {:components {:ambiguity {:components {:synonym-pairs {:measurement 0.0 :score 0}}}}}
               (#'complexity/score-catalog es nil))))))
 
+<<<<<<< HEAD
 (deftest ^:parallel complexity-bands-well-formed-test
   (testing "every band list in the bands tree: last entry is unbounded; earlier entries have strictly ascending :max"
     (let [collect-bands (fn collect-bands [node]
@@ -194,6 +195,8 @@
                                                                    :rating-label nil}}}}}
               (@#'complexity/decorate-with-ratings* bands catalog))))))
 
+=======
+>>>>>>> v0.61.2
 (deftest ^:parallel score-from-entities-metabot-fallback-test
   (testing "score-from-entities marks :metabot as a universe fallback when no metabot-entities are passed"
     (let [library  []

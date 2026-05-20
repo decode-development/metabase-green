@@ -966,6 +966,7 @@
   (testing "streaming-request passes metabot-id to native-agent-streaming-request"
     (let [captured-args (atom nil)
           test-metabot-id metabot.config/embedded-metabot-id]
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
                                   api/check-conversation-access!        (constantly nil)
                                   metabot.persistence/start-turn!       (fn [& _]
@@ -975,6 +976,17 @@
                                                                           (reset! captured-args args)
                                                                           ;; Return a minimal streaming response
                                                                           nil)]
+=======
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/check-conversation-access!        (constantly nil)
+                    metabot.persistence/start-turn!       (fn [& _]
+                                                            {:assistant-msg-id 1
+                                                             :assistant-external-id "ext-id"})
+                    api/native-agent-streaming-request    (fn [args]
+                                                            (reset! captured-args args)
+                                                            ;; Return a minimal streaming response
+                                                            nil)]
+>>>>>>> v0.61.2
         (api/streaming-request {:metabot_id      test-metabot-id
                                 :profile_id      nil
                                 :message         "test message"
@@ -1005,8 +1017,13 @@
           ip-for       (fn [conversation-id]
                          (:ip_address (t2/select-one :model/MetabotConversation :id conversation-id)))
           info-with-ip (fn [ip] {:origin nil :referer nil :user-agent nil :ip-address ip})]
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
                                   api/native-agent-streaming-request    (constantly nil)]
+=======
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/native-agent-streaming-request    (constantly nil)]
+>>>>>>> v0.61.2
         (mt/with-premium-features #{:audit-app}
           (mt/with-test-user :rasta
             (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
@@ -1046,8 +1063,13 @@
                           :ip-address nil})
           convo-for    (fn [conversation-id]
                          (t2/select-one :model/MetabotConversation :id conversation-id))]
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
                                   api/native-agent-streaming-request    (constantly nil)]
+=======
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/native-agent-streaming-request    (constantly nil)]
+>>>>>>> v0.61.2
         (mt/with-premium-features #{:audit-app}
           (mt/with-test-user :rasta
             (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
@@ -1087,12 +1109,21 @@
     (mt/with-premium-features #{:audit-app}
       (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider test-provider]
         (binding [scope/*current-user-metabot-permissions* scope/all-yes-permissions]
+<<<<<<< HEAD
           (mt/with-dynamic-fn-redefs [openrouter/openrouter (fn [_]
                                                               (mut/mock-llm-response
                                                                [{:type :start :id "msg-1"}
                                                                 {:type :text :text "hi"}
                                                                 {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
                                                                  :model "test-model" :id    "msg-1"}]))]
+=======
+          (with-redefs [openrouter/openrouter (fn [_]
+                                                (mut/mock-llm-response
+                                                 [{:type :start :id "msg-1"}
+                                                  {:type :text :text "hi"}
+                                                  {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
+                                                   :model "test-model" :id    "msg-1"}]))]
+>>>>>>> v0.61.2
             (mt/with-model-cleanup [:model/MetabotMessage
                                     [:model/MetabotConversation :created_at]]
               (testing "flag on: hostname AND path are recorded"
@@ -1165,6 +1196,7 @@
 (deftest agent-streaming-returns-free-trial-limit-error-when-managed-provider-is-locked-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider
                                      "metabase/anthropic/claude-sonnet-4-6"]
+<<<<<<< HEAD
     (mt/with-dynamic-fn-redefs [premium-features/token-status             (constantly {:meters {:anthropic:claude-sonnet-4-6:tokens {:meter-value 1000000
                                                                                                                                      :is-locked   true}}})
                                 metabot.config/check-metabot-enabled!     (constantly nil)
@@ -1172,6 +1204,15 @@
                                                                             (throw (ex-info "should not store messages" {})))
                                 api/native-agent-streaming-request        (fn [& _]
                                                                             (throw (ex-info "should not call agent" {})))]
+=======
+    (with-redefs [premium-features/token-status             (constantly {:meters {:anthropic:claude-sonnet-4-6:tokens {:meter-value 1000000
+                                                                                                                       :is-locked   true}}})
+                  metabot.config/check-metabot-enabled!     (constantly nil)
+                  metabot.persistence/start-turn!           (fn [& _]
+                                                              (throw (ex-info "should not store messages" {})))
+                  api/native-agent-streaming-request        (fn [& _]
+                                                              (throw (ex-info "should not call agent" {})))]
+>>>>>>> v0.61.2
       (mt/user-http-request :rasta :post 402 "metabot/agent-streaming"
                             {:message         "test message"
                              :context         {}

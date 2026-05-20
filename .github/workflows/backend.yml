@@ -56,7 +56,11 @@ jobs:
     timeout-minutes: 15
     name: Eastwood (changed tests only)
     steps:
+<<<<<<< HEAD
       - uses: actions/checkout@v6
+=======
+      - uses: actions/checkout@v4
+>>>>>>> v0.61.2
         with:
           # Enough history for `git merge-base` on a typical PR.
           fetch-depth: 200

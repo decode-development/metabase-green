@@ -279,6 +279,7 @@ describe("metabase/services > runQuestionQuery", () => {
       });
     });
 
+<<<<<<< HEAD
     it("rejects with { isCancelled: true } when cancelDeferred resolves (ad-hoc question)", async () => {
       // Guards the RTK Query cancellation path: resolving `cancelDeferred`
       // must abort the underlying `/api/dataset` request and reject with
@@ -301,6 +302,8 @@ describe("metabase/services > runQuestionQuery", () => {
       await expect(runPromise).rejects.toEqual({ isCancelled: true });
     });
 
+=======
+>>>>>>> v0.61.2
     it("normalizes plain-text 4xx error bodies into a structured error result (EMB-1659)", async () => {
       // Embed API checks (e.g. `/api/embed/card/:token/query`) reject with a
       // plain-text body when a locked param is missing from the JWT. Without
@@ -316,7 +319,10 @@ describe("metabase/services > runQuestionQuery", () => {
       });
 
       const result = await runQuestionQuery(question, {
+<<<<<<< HEAD
         dispatch: getRtkStore().dispatch,
+=======
+>>>>>>> v0.61.2
         cancelDeferred: defer(),
       });
 

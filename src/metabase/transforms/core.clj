@@ -22,9 +22,12 @@
  [metabase.transforms.settings
   transform-timeout
   transforms-meter-locked]
+<<<<<<< HEAD
  [metabase.transforms.usage
   transform-locked?
   transforms-meter-locked?]
+=======
+>>>>>>> v0.61.2
  [metabase.transforms-base.util
   native-query-transform?
   output-table

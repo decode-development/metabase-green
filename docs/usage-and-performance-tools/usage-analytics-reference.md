@@ -193,8 +193,11 @@ Columns:
 - IP Address
 - Tenant ID
 - Request ID
+<<<<<<< HEAD
 - Cache Creation Tokens
 - Cache Read Tokens
+=======
+>>>>>>> v0.61.2
 
 ### Alerts
 
@@ -573,9 +576,12 @@ The Topic column on the [Activity log](#activity-log) model takes one of:
 - comment-delete
 - comment-update
 - create-permission-failure
+<<<<<<< HEAD
 - custom-viz-plugin-create
 - custom-viz-plugin-delete
 - custom-viz-plugin-update
+=======
+>>>>>>> v0.61.2
 - dashboard-add-cards
 - dashboard-create
 - dashboard-delete

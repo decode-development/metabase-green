@@ -533,7 +533,11 @@
 
   Returns a RemoteSyncTask. Throws ExceptionInfo with status 400 and :conflicts true if there
   are unsaved changes and force? is false."
+<<<<<<< HEAD
   [branch force? import-args & {:keys [on-success]}]
+=======
+  [branch force? import-args]
+>>>>>>> v0.61.2
   (guards/ensure-no-active-task!)
   (let [pre-task-branch (settings/remote-sync-branch)
         source          (source/source-from-settings branch)
@@ -547,8 +551,12 @@
                   (import! (source.p/snapshot source) task-id
                            (assoc import-args
                                   :force?           force?
+<<<<<<< HEAD
                                   :pre-task-branch  pre-task-branch)))
                 :on-success on-success)))
+=======
+                                  :pre-task-branch  pre-task-branch))))))
+>>>>>>> v0.61.2
 
 (defn async-export!
   "Exports the remote-synced collections to the remote source repository asynchronously.
@@ -560,7 +568,11 @@
 
   Returns a RemoteSyncTask. Throws ExceptionInfo with status 400 and :conflicts true if there
   are new remote changes and force? is false."
+<<<<<<< HEAD
   [branch force? message & {:keys [on-success]}]
+=======
+  [branch force? message]
+>>>>>>> v0.61.2
   (guards/ensure-no-active-task!)
   (let [pre-task-branch        (settings/remote-sync-branch)
         source                 (source/source-from-settings branch)
@@ -573,9 +585,13 @@
                        :conflicts true})))
     (run-async! "export" branch
                 (fn [task-id]
+<<<<<<< HEAD
                   (export! snapshot task-id message
                            :pre-task-branch pre-task-branch))
                 :on-success on-success)))
+=======
+                  (export! snapshot task-id message :pre-task-branch pre-task-branch)))))
+>>>>>>> v0.61.2
 
 (defn create-branch!
   "Creates a new remote branch from `base-branch` and switches `remote-sync-branch`
@@ -590,11 +606,19 @@
 (defn stash!
   "Creates a new remote branch from the current `remote-sync-branch` and starts an
    async export to it. Returns the resulting RemoteSyncTask. Does not publish events."
+<<<<<<< HEAD
   [new-branch message & {:keys [on-success]}]
   (guards/ensure-no-active-task!)
   (let [source (source/source-from-settings)]
     (source.p/create-branch source new-branch (settings/remote-sync-branch))
     (async-export! new-branch false message :on-success on-success)))
+=======
+  [new-branch message]
+  (guards/ensure-no-active-task!)
+  (let [source (source/source-from-settings)]
+    (source.p/create-branch source new-branch (settings/remote-sync-branch))
+    (async-export! new-branch false message)))
+>>>>>>> v0.61.2
 
 (defn finish-remote-config!
   "Based on the current configuration, fill in any missing settings and finalize remote sync setup.
