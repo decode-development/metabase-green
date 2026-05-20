@@ -35,3 +35,21 @@ The default UI font is **Poppins** (already bundled with Metabase upstream). Cha
 ## Upstream
 
 This fork tracks the official [metabase/metabase](https://github.com/metabase/metabase) OSS releases. Automation for keeping the fork in sync and publishing Docker images is described in the sections below as each workflow is introduced.
+
+---
+
+## Automation
+
+### Workflow Management — `teal-enforce-workflows.yml`
+
+Metabase upstream ships ~100 GitHub Actions workflows. On a fork, all of them are inherited and enabled by default. The enforce workflow disables any workflow whose filename does not start with `teal-`, keeping only this fork's own automations active.
+
+**Triggers:**
+- Automatically on any push to `master` that touches `.github/workflows/` — catches new upstream workflows arriving via a sync merge
+- Manual dispatch — use this for the **initial bulk disable** after first push
+
+**Initial setup:** after pushing this repository for the first time, run the workflow manually via:
+> Actions → Enforce Workflow Allowlist → Run workflow
+
+
+
