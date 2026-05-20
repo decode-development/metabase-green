@@ -49,6 +49,14 @@ import {
   SetupSsoPage,
 } from "metabase/embedding/embedding-hub";
 import { ModalRoute } from "metabase/hoc/ModalRoute";
+<<<<<<< HEAD
+=======
+import {
+  AISettingsPage,
+  McpSettingsPage,
+} from "metabase/metabot/components/MetabotAdmin/AISettingsPage";
+import { MetabotAdminLayout } from "metabase/metabot/components/MetabotAdmin/MetabotAdminLayout";
+>>>>>>> v0.61.2
 import { DataModelV1 } from "metabase/metadata/pages/DataModelV1";
 import {
   PLUGIN_ADMIN_TOOLS,

@@ -41,7 +41,11 @@ The field accepts wildcards (`*`) for subdomains. Changes take effect in about a
 
 ## Connect an MCP client
 
+<<<<<<< HEAD
 If your admin has turned on [your Metabase's MCP server](#enable-mcp-server), all you need to do is point your MCP client at Metabase's MCP endpoint, `/api/mcp`. For example:
+=======
+If your admin has turned on [your Metabase's MCP server](./settings.md#enable-mcp-server), all you need to do is point your MCP client at Metabase's MCP endpoint, `/api/mcp`. For example:
+>>>>>>> v0.61.2
 
 ```
 https://{your-metabase.example.com}/api/mcp
@@ -90,7 +94,11 @@ MCP server requests are handled by whatever AI client you're using (like a deskt
 
 For example, if you ask your AI client to use your Metabase's MCP server "what's our q3 revenue," your client will interact with the MCP server to figure out which tools it needs to field your request. Your AI can decide that it needs to use the tool **construct_query** and **execute_query**, and what those queries might be. Then your client will call those tools for Metabase to run.
 
+<<<<<<< HEAD
 You don't need to have an [AI provider](settings.md#choose-ai-provider) configured in Metabase to use your Metabase's MCP server. If you _do_ have an AI provider configured in Metabase to power Metabot, that provider will _not_ be used for MCP server requests. MCP calls by your local client have no effect on token usage for your Metabase's AI connection.
+=======
+You don't need to have an [AI provider](settings.md#supported-providers) configured in Metabase to use your Metabase's MCP server. If you _do_ have an AI provider configured in Metabase to power Metabot, that provider will _not_ be used for MCP server requests. MCP calls by your local client have no effect on token usage for your Metabase's AI connection.
+>>>>>>> v0.61.2
 
 ## Available tools
 

@@ -8,9 +8,13 @@
    [metabase.api.common :as api]
    [metabase.api.macros.defendpoint.tools-manifest :as tools-manifest]
    [metabase.config.core :as config]
+<<<<<<< HEAD
    [metabase.mcp.resources :as mcp.resources]
    [metabase.mcp.scope :as mcp.scope]
    [metabase.mcp.session :as mcp.session]
+=======
+   [metabase.mcp.scope :as mcp.scope]
+>>>>>>> v0.61.2
    [metabase.server.streaming-response :as streaming-response]
    [metabase.util :as u]
    [metabase.util.json :as json]
@@ -46,8 +50,17 @@
     (into []
           (comp (filter #(mcp.scope/matches? token-scopes (:scope %)))
                 (map (fn [tool]
+<<<<<<< HEAD
                        (select-keys tool [:name :title :description :inputSchema :annotations :_meta]))))
           (concat tools (mcp.resources/list-ui-tools)))))
+=======
+                       (cond-> {:name        (:name tool)
+                                :title       (:title tool)
+                                :description (:description tool)
+                                :inputSchema (:inputSchema tool)}
+                         (:annotations tool) (assoc :annotations (:annotations tool))))))
+          tools)))
+>>>>>>> v0.61.2
 
 (defn- build-tool-index
   "Build name->tool lookup from manifest tools."

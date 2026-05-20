@@ -1,6 +1,10 @@
 {
   "name": "@metabase/embedding-sdk-react",
+<<<<<<< HEAD
   "version": "0.62.0-alpha",
+=======
+  "version": "0.61.0",
+>>>>>>> v0.61.2
   "description": "Metabase Embedding SDK for React",
   "bin": "./dist/cli.js",
   "repository": {

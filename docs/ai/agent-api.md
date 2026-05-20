@@ -13,6 +13,8 @@ _Admin > AI > MCP_
 
 Admins enable the Agent API under **Admin > AI > MCP**.
 
+Admins enable the Agent API under **Admin > AI > MCP**. See [Agent API settings](./settings.md#agent-api-settings).
+
 ## Agent API endpoints and reference
 
 Check out the API endpoint docs: [/api/agent](../api.html#tag/apiagent).

@@ -133,7 +133,11 @@ jobs:
       skip-custom-viz: ${{ needs.create-test-plan.outputs.custom_viz_all != 'true' }}
 
   e2e-tests:
+<<<<<<< HEAD
     needs: [create-test-plan, uberjar]
+=======
+    needs: [files-changed, uberjar]
+>>>>>>> v0.61.2
     # Skip e2e tests when the uberjar build failed or was cancelled — the
     # downstream tests can't fetch a missing artifact, and we don't want to
     # mask the uberjar failure with a wave of misleading e2e errors. We still
@@ -144,7 +148,11 @@ jobs:
     # branch protection blocks the merge as pending.
     if: |
       always() && !cancelled() &&
+<<<<<<< HEAD
       needs.create-test-plan.result == 'success' &&
+=======
+      needs.files-changed.result == 'success' &&
+>>>>>>> v0.61.2
       needs.uberjar.result != 'failure' &&
       needs.uberjar.result != 'cancelled'
     uses: ./.github/workflows/e2e-tests.yml

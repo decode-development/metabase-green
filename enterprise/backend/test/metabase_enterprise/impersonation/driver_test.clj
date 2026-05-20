@@ -1096,6 +1096,7 @@
                             (format "UPDATE %s SET name = 'a' WHERE id = -1; UPDATE %s SET name = 'b' WHERE id = -1" venues-table venues-table)
                             (format "INSERT INTO %s (name) VALUES ('x'); SELECT 1;" venues-table)
                             (format "SET ROLE NONE; DELETE FROM %s WHERE id = -1;" venues-table)))))))))))))))
+<<<<<<< HEAD
 
 (deftest ^:parallel impersonated-query-parse-error-message-test
   (testing "When a native query fails to parse, the validator reports a parse error -- not a misleading 'must be a single select' message (#73593)"
@@ -1118,3 +1119,5 @@
           (is (some? thrown) "expected validate-impersonated-query* to throw")
           (is (= qp.error-type/invalid-query (:type (ex-data thrown))))
           (is (re-find #"single select statement" (ex-message thrown))))))))
+=======
+>>>>>>> v0.61.2

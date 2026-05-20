@@ -1621,10 +1621,15 @@
   ([form]
    (rewrite-fields-to-force-using-column-aliases form {:is-breakout false}))
   ([form {is-breakout :is-breakout}]
+<<<<<<< HEAD
    (driver-api/replace form
      [:field (opts :guard :lib/uuid) id-or-name] ;; mbql5
      [:field (force-using-column-alias-opts opts is-breakout) id-or-name]
 
+=======
+   (driver-api/replace
+     form
+>>>>>>> v0.61.2
      [:field id-or-name opts]
      [:field id-or-name (force-using-column-alias-opts opts is-breakout)])))
 

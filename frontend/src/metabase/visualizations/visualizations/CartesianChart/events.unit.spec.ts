@@ -8,6 +8,7 @@ import type {
   Datum,
   DimensionModel,
 } from "metabase/visualizations/echarts/cartesian/model/types";
+<<<<<<< HEAD
 import type { TimelineEventsModel } from "metabase/visualizations/echarts/cartesian/timeline-events/types";
 import type { EChartsSeriesMouseEvent } from "metabase/visualizations/echarts/types";
 import {
@@ -17,6 +18,14 @@ import {
 } from "metabase-types/api/mocks";
 
 import { getEventDimensions, getTimelineEventsForEvent } from "./events";
+=======
+import {
+  createMockColumn,
+  createMockDatetimeColumn,
+} from "metabase-types/api/mocks";
+
+import { getEventDimensions } from "./events";
+>>>>>>> v0.61.2
 
 const CARD_ID = 107;
 
@@ -209,6 +218,7 @@ describe("getEventDimensions", () => {
       { column: sourceColumn, value: "Affiliate" },
     ]);
   });
+<<<<<<< HEAD
 
   it("includes the x-axis breakout when clicking a bar with only metric data (#73448)", () => {
     const categoryColumn = createMockColumn({
@@ -303,4 +313,6 @@ describe("getTimelineEventsForEvent", () => {
       getTimelineEventsForEvent(timelineEventsModel, event),
     ).toBeUndefined();
   });
+=======
+>>>>>>> v0.61.2
 });

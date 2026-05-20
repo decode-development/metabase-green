@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+=======
+import {
+  getClickBehavior,
+  getClickBehaviorData,
+  getParameterIdValuePairs,
+  getParameterValuesBySlug,
+} from "metabase/dashboard/utils/dashboard-click-drill";
+>>>>>>> v0.61.2
 import type { ParameterValues } from "metabase/embedding-sdk/types/dashboard";
 import type { DashboardTabId, ParameterValueOrArray } from "metabase-types/api";
 

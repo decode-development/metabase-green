@@ -152,9 +152,13 @@ export const MetabotChat = ({
               ) : (
                 <Text c="text-tertiary" maw="12rem" ta="center" lh="lg">
                   {config.emptyText ??
+<<<<<<< HEAD
                     (showIllustrations
                       ? t`I can help you explore your metrics and models.`
                       : t`Explore your metrics and models with AI.`)}
+=======
+                    t`I can help you explore your metrics and models.`}
+>>>>>>> v0.61.2
                 </Text>
               )}
             </Flex>

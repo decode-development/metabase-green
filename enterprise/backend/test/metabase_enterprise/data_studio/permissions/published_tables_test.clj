@@ -102,8 +102,13 @@
 (deftest published-table-perm-grant-rows-produces-create-queries-grants-test
   (testing "Returns SELECT producing (id, perms/create-queries, query-builder) rows for published+visible tables"
     (mt/with-premium-features #{:library}
+<<<<<<< HEAD
       (mt/with-temp [:model/Collection {allowed-coll-id :id} {:type "library-data"}
                      :model/Collection {blocked-coll-id :id} {:type "library-data"}
+=======
+      (mt/with-temp [:model/Collection {allowed-coll-id :id} {}
+                     :model/Collection {blocked-coll-id :id} {}
+>>>>>>> v0.61.2
                      :model/PermissionsGroup {group-id :id} {}
                      :model/User {user-id :id} {}
                      :model/PermissionsGroupMembership _ {:user_id user-id :group_id group-id}
@@ -140,8 +145,13 @@
 (deftest visible-filter-clause-include-published-via-collection-test
   (testing "visible-filter-clause :model/Table extends visibility via published+collection grants when requested"
     (mt/with-premium-features #{:library}
+<<<<<<< HEAD
       (mt/with-temp [:model/Collection {allowed-coll-id :id} {:type "library-data"}
                      :model/Collection {blocked-coll-id :id} {:type "library-data"}
+=======
+      (mt/with-temp [:model/Collection {allowed-coll-id :id} {}
+                     :model/Collection {blocked-coll-id :id} {}
+>>>>>>> v0.61.2
                      :model/PermissionsGroup {group-id :id} {}
                      :model/User {user-id :id} {}
                      :model/PermissionsGroupMembership _ {:user_id user-id :group_id group-id}

@@ -106,8 +106,12 @@ You can set different attributes to enable/disable UI. Here are some example att
 | `token`                 | Required. The signed JWT token from your server.                                                                                                                                                                                                                                 |
 | `with-title`            | Show or hide the title. Values: `"true"` or `"false"`.                                                                                                                                                                                                                           |
 | `with-downloads`\*      | Enable or disable downloads. Values: `"true"` or `"false"`.                                                                                                                                                                                                                      |
+<<<<<<< HEAD
 | `initial-parameters`    | JSON string of initial parameter values (uncontrolled). Example: `'{"category":["Gizmo"]}'`. See [Modular embedding parameters](./parameters.md#pass-parameter-values-to-embedded-components).                                                                                   |
 | `parameters`            | JSON string of parameter values (controlled). Example: `'{"category":["Gizmo"]}'`. See [Modular embedding parameters](./parameters.md#pass-parameter-values-to-embedded-components).                                                                                             |
+=======
+| `initial-parameters`    | JSON string of parameter values. Example: `'{"category":["Gizmo"]}'`.                                                                                                                                                                                                            |
+>>>>>>> v0.61.2
 | `auto-refresh-interval` | Dashboards only. Auto-refresh interval in seconds.                                                                                                                                                                                                                               |
 | `custom-context`        | Forwarded to your [`guestEmbedProviderUri`](#refreshing-or-initializing-the-jwt-from-your-server) endpoint as `customContext`. Either a string (e.g., `"gadgets-tab"`), or a JSON-stringified object like `initial-parameters` (e.g., `'{"tab":"gadgets","region":"us-east"}'`). |
 

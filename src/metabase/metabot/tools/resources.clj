@@ -178,6 +178,7 @@
    :description  description
    :uri          (llm-rep/metabase-uri :table id)})
 
+<<<<<<< HEAD
 (defn- present-card
   "Cards (questions or models) — :type on a Card is :question / :model / :metric."
   [{:keys [id name type collection_id description database_id table_id]}]
@@ -203,6 +204,27 @@
    :collection_id collection_id
    :description   description
    :uri           (llm-rep/metabase-uri :dashboard id)})
+=======
+      ;; metabase://table/123/fields
+      (= sub-resource "fields")
+      (entity-details/get-table-details {:entity-type :table
+                                         :entity-id table-id
+                                         :with-fields? true
+                                         :with-field-values? false
+                                         :with-related-tables? true
+                                         :with-measures? true
+                                         :with-segments? true})
+
+      ;; metabase://table/123
+      (nil? sub-resource)
+      (entity-details/get-table-details {:entity-type :table
+                                         :entity-id table-id
+                                         :with-fields? false
+                                         :with-field-values? false
+                                         :with-related-tables? true
+                                         :with-measures? true
+                                         :with-segments? true})
+>>>>>>> v0.61.2
 
 (defn- present-transform
   [{:keys [id name description source_database_id]}]

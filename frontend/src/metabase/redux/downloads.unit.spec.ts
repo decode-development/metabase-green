@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import api from "metabase/api/legacy-client";
 import { mockIsEmbeddingSdk } from "metabase/embedding-sdk/mocks/config-mock";
+=======
+import { mockIsEmbeddingSdk } from "metabase/embedding-sdk/mocks/config-mock";
+import api from "metabase/utils/api";
+>>>>>>> v0.61.2
 import Question from "metabase-lib/v1/Question";
 import type { EntityToken } from "metabase-types/api/entity";
 import { createMockCard, createMockDataset } from "metabase-types/api/mocks";

@@ -686,6 +686,7 @@
 
         (testing "increments cache token counters when the :usage part carries cache fields"
           ;; :promptTokens is the pre-summed total input (40 fresh + 300 cache_creation + 1200 cache_read = 1540).
+<<<<<<< HEAD
           (mt/with-dynamic-fn-redefs [openrouter/openrouter
                                       (constantly (test-util/mock-llm-response
                                                    [{:type  :start :id "m1"}
@@ -695,6 +696,17 @@
                                                              :cacheCreationTokens 300
                                                              :cacheReadTokens     1200}
                                                      :model "test-model"}]))]
+=======
+          (with-redefs [openrouter/openrouter
+                        (constantly (test-util/mock-llm-response
+                                     [{:type  :start :id "m1"}
+                                      {:type  :usage
+                                       :usage {:promptTokens        1540
+                                               :completionTokens    10
+                                               :cacheCreationTokens 300
+                                               :cacheReadTokens     1200}
+                                       :model "test-model"}]))]
+>>>>>>> v0.61.2
             (run! identity (self/call-llm "openrouter/test-model" nil [] {} {:tag "metabot_agent"})))
           (is (==  300 (mt/metric-value system :metabase-metabot/llm-cache-creation-tokens labels)))
           (is (== 1200 (mt/metric-value system :metabase-metabot/llm-cache-read-tokens labels))))
@@ -705,12 +717,21 @@
         (analytics/clear! :metabase-metabot/llm-cache-read-tokens)
 
         (testing "does not increment cache counters when cache fields are absent or zero"
+<<<<<<< HEAD
           (mt/with-dynamic-fn-redefs [openrouter/openrouter
                                       (constantly (test-util/mock-llm-response
                                                    [{:type  :start :id "m1"}
                                                     {:type  :usage
                                                      :usage {:promptTokens 10 :completionTokens 5}
                                                      :model "test-model"}]))]
+=======
+          (with-redefs [openrouter/openrouter
+                        (constantly (test-util/mock-llm-response
+                                     [{:type  :start :id "m1"}
+                                      {:type  :usage
+                                       :usage {:promptTokens 10 :completionTokens 5}
+                                       :model "test-model"}]))]
+>>>>>>> v0.61.2
             (run! identity (self/call-llm "openrouter/test-model" nil [] {} {:tag "metabot_agent"})))
           (is (zero? (mt/metric-value system :metabase-metabot/llm-cache-creation-tokens labels)))
           (is (zero? (mt/metric-value system :metabase-metabot/llm-cache-read-tokens labels))))))))
@@ -809,6 +830,7 @@
       ;; The adapter pre-sums input + cache_creation + cache_read into :promptTokens,
       ;; so the mock supplies the already-summed value (950 = 100 fresh + 50 cache_creation + 800 cache_read).
       ;; total_tokens reverts to prompt + completion = 950 + 20 = 970.
+<<<<<<< HEAD
       (mt/with-dynamic-fn-redefs [openrouter/openrouter
                                   (constantly (test-util/mock-llm-response
                                                [{:type :start :id "msg-1"}
@@ -819,6 +841,18 @@
                                                                       :cacheCreationTokens 50
                                                                       :cacheReadTokens     800}
                                                  :model "test-model" :id "msg-1"}]))]
+=======
+      (with-redefs [openrouter/openrouter
+                    (constantly (test-util/mock-llm-response
+                                 [{:type :start :id "msg-1"}
+                                  {:type :tool-input :id "call-1" :function "get-time"
+                                   :arguments {:tz "UTC"}}
+                                  {:type :usage :usage {:promptTokens        950
+                                                        :completionTokens    20
+                                                        :cacheCreationTokens 50
+                                                        :cacheReadTokens     800}
+                                   :model "test-model" :id "msg-1"}]))]
+>>>>>>> v0.61.2
         (mt/with-current-user rasta-id
           (snowplow-test/with-fake-snowplow-collector
             (run! identity (self/call-llm "openrouter/test-model" nil [] test-util/TOOLS snowplow-tracking-opts))

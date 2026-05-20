@@ -1,7 +1,11 @@
 (ns metabase.transforms.settings
   (:require
    [metabase.settings.core :as setting]
+<<<<<<< HEAD
    [metabase.transforms.usage :as transforms.usage]
+=======
+   [metabase.transforms.feature-gating :as transforms.gating]
+>>>>>>> v0.61.2
    [metabase.util.i18n :refer [deferred-tru]]))
 
 (set! *warn-on-reflection* true)
@@ -35,4 +39,8 @@
   :export?    false
   :default    false
   :doc        false
+<<<<<<< HEAD
   :getter     transforms.usage/transforms-meter-locked?)
+=======
+  :getter     transforms.gating/transforms-meter-locked?)
+>>>>>>> v0.61.2
