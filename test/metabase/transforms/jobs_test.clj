@@ -35,7 +35,6 @@
                    :model/TransformTransformTag _ {:transform_id (:id t) :tag_id (:id tag) :position 0}]
       (is (= #{(:id t)}
              (#'jobs/job-transform-ids (:id job))))))
-
   (testing "job has 2 tags, transform has only 1 — must still be found"
     (mt/with-temp [:model/TransformTag tag-a {:name "tag-a"}
                    :model/TransformTag tag-b {:name "tag-b"}
@@ -46,7 +45,6 @@
                    :model/TransformTransformTag _ {:transform_id (:id t) :tag_id (:id tag-a) :position 0}]
       (is (= #{(:id t)}
              (#'jobs/job-transform-ids (:id job))))))
-
   (testing "job has 2 tags, two transforms with different tag subsets — both found"
     (mt/with-temp [:model/TransformTag tag-a {:name "tag-a"}
                    :model/TransformTag tag-b {:name "tag-b"}
@@ -59,13 +57,11 @@
                    :model/TransformTransformTag _ {:transform_id (:id t2) :tag_id (:id tag-b) :position 0}]
       (is (= #{(:id t1) (:id t2)}
              (#'jobs/job-transform-ids (:id job))))))
-
   (testing "job tag with no matching transforms — empty set"
     (mt/with-temp [:model/TransformTag tag {:name "tag-orphan"}
                    :model/TransformJob job {:name "job-4" :schedule "0 0 * * * ? *"}
                    :model/TransformJobTransformTag _ {:job_id (:id job) :tag_id (:id tag) :position 0}]
       (is (= #{} (#'jobs/job-transform-ids (:id job))))))
-
   (testing "job with no tags — empty set"
     (mt/with-temp [:model/TransformJob job {:name "job-5" :schedule "0 0 * * * ? *"}]
       (is (= #{} (#'jobs/job-transform-ids (:id job)))))))
@@ -167,7 +163,6 @@
           (is (re-matches #".*Skip running transform 1 due to lacking premium features.*"
                           (:message (first @logged-messages)))
               "Warning message should indicate transform was skipped due to missing features")))))
-
   (testing "Query transforms run with :transforms-basic feature"
     (mt/with-premium-features #{:hosting :transforms-basic}
       (let [query-transform {:id 3
@@ -288,7 +283,7 @@
                       (is (=? {:status :failed
                                :message string?}
                               (t2/select-one :model/TransformJobRun :id @run-id-atom)))
-                        ;; crowberto is a superuser/admin, so they receive the notification
+                      ;; crowberto is a superuser/admin, so they receive the notification
                       (is (mt/received-email-subject? :crowberto #"The job .* had failures"))
                       (is (mt/received-email-body? :crowberto #"Uncaught error")))))))))))))
 
@@ -493,7 +488,7 @@
                (notification.seed/seed-notification!)
                (let [mp (mt/metadata-provider)
                      table (t2/select-one :model/Table (mt/id :transforms_products))
-                      ;; generate sql for different dbs
+                     ;; generate sql for different dbs
                      sql (-> (lib/query mp (lib.metadata/table mp (mt/id :transforms_products)))
                              (lib/with-fields [(lib.metadata/field mp (mt/id :transforms_products :name))])
                              (lib/limit 10)
@@ -513,7 +508,7 @@
                                   :model/TransformJobTransformTag _ {:job_id (:id job)
                                                                      :tag_id (:id tag)
                                                                      :position 0}
-                                   ;; independent transform
+                                  ;; independent transform
                                   :model/Transform t0 {:name "transform0"
                                                        :source {:type :query
                                                                 :query (lib/native-query mp sql)}
@@ -522,9 +517,9 @@
                                   :model/TransformTransformTag _tag0 {:transform_id (:id t0)
                                                                       :tag_id (:id tag)
                                                                       :position 0}]
-                      ;; NOTE: No `with-current-user` wrapper - this simulates running the transform
-                      ;; without a user context (e.g., from a cron job or background task).
-                      ;; previously this could produce the wrong error message from the QP routing middleware.
+                     ;; NOTE: No `with-current-user` wrapper - this simulates running the transform
+                     ;; without a user context (e.g., from a cron job or background task).
+                     ;; previously this could produce the wrong error message from the QP routing middleware.
                      (try
                        (jobs/run-job! (:id job) {:run-method :cron})
                        (catch Exception _))
@@ -534,11 +529,11 @@
 (deftest get-plan-ignores-unrelated-routing-enabled-transforms-test
   (when config/ee-available?
     (testing "get-plan must not scan unrelated transforms on routing-enabled databases"
-     ;; Regression: a transform on a routing-enabled database is unrunnable (by design), but historically
-     ;; `get-plan` would fetch *every* transform in the system and call `table-dependencies` on each to
-     ;; build a global dependency graph. The routing-enabled transform would throw during that scan,
-     ;; taking down the whole scheduler and sending a misleading failure email naming the zombie
-     ;; transform — even when no job was asking to run it.
+      ;; Regression: a transform on a routing-enabled database is unrunnable (by design), but historically
+      ;; `get-plan` would fetch *every* transform in the system and call `table-dependencies` on each to
+      ;; build a global dependency graph. The routing-enabled transform would throw during that scan,
+      ;; taking down the whole scheduler and sending a misleading failure email naming the zombie
+      ;; transform — even when no job was asking to run it.
       (mt/with-premium-features #{:database-routing :transforms-basic}
         (let [mp (mt/metadata-provider)]
           (mt/with-temp [:model/Database       _destination {:engine             :h2
@@ -546,7 +541,7 @@
                                                              :details            {:destination_database true}}
                          :model/DatabaseRouter _            {:database_id    (mt/id)
                                                              :user_attribute "db_name"}
-                        ;; Zombie transform on a routing-enabled database, NOT tagged to any job.
+                         ;; Zombie transform on a routing-enabled database, NOT tagged to any job.
                          :model/Transform      _zombie      {:name       "zombie-transform"
                                                              :source     {:type  :query
                                                                           :query (lib/native-query mp "SELECT 1")}
