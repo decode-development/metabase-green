@@ -44,8 +44,8 @@
   [query-type model]
   (comp
    (next-method query-type model)
-    ;; This is for safety - if a secret ever gets stored in details we don't want it to leak.
-    ;; This will also help to secure properties that we set to secret in the future.
+   ;; This is for safety - if a secret ever gets stored in details we don't want it to leak.
+   ;; This will also help to secure properties that we set to secret in the future.
    (map secret/clean-secret-properties-from-database)))
 
 (t2/deftransforms :model/Database
@@ -581,13 +581,13 @@
                           (setting/can-read-setting? setting-name
                                                      (setting/current-user-readable-visibilities))
                           (catch Throwable e
-                         ;; there is an known issue with exception is ignored when render API response (#32822)
-                         ;; If you see this error, you probably need to define a setting for `setting-name`.
-                         ;; But ideally, we should resolve the above issue, and remove this try/catch
+                            ;; there is an known issue with exception is ignored when render API response (#32822)
+                            ;; If you see this error, you probably need to define a setting for `setting-name`.
+                            ;; But ideally, we should resolve the above issue, and remove this try/catch
                             (log/errorf e "Error checking the readability of %s setting. The setting will be hidden in API response."
                                         setting-name)
-                         ;; let's be conservative and hide it by defaults, if you want to see it,
-                         ;; you need to define it :)
+                            ;; let's be conservative and hide it by defaults, if you want to see it,
+                            ;; you need to define it :)
                             false)))
                       settings)
                      (when (not= <> settings)
@@ -630,12 +630,20 @@
               :is_sample        false
               :uploads_enabled  false}})
 
+(def ^:dynamic *include-h2-in-extract?*
+  "When false (the default), [[serdes/extract-query]] skips H2 databases because they are rejected at import time
+  by [[assert-not-h2!]]. Round-trip tests that exercise H2 throughout — and rebind `assert-not-h2!` accordingly —
+  may rebind this to `true` to keep the H2 databases in the extract."
+  false)
+
 (defmethod serdes/extract-query "Database"
   [model-name {:keys [where]}]
   (t2/reducible-select (keyword "model" model-name)
-                       {:where [:and
-                                (or where true)
-                                [:= :router_database_id nil]]}))
+                       {:where (cond-> [:and
+                                        (or where true)
+                                        [:= :router_database_id nil]]
+                                 (not *include-h2-in-extract?*)
+                                 (conj [:not= :engine "h2"]))}))
 
 (defmethod serdes/entity-id "Database"
   [_ {:keys [name]}]

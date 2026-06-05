@@ -524,7 +524,6 @@
                                       {:model    model-name
                                        :key      k
                                        :instance instance})))
-
                     [export-k res])))))
     (catch Exception e
       (throw (ex-info (format "Error extracting %s %s" model-name (:id instance))
@@ -1097,6 +1096,13 @@
                              "Schema"   "schemas"
                              "Table"    "tables"
                              "Field"    "fields"})
+
+(defn serialized-query-source-table
+  "Given a serialized query (with portable references), returns the portable reference of the table it is based
+  on. Measures and segments use this to omit the table_id property when it is derivable from the query. This should be
+  an mbql query and not a native query."
+  [serialized-query]
+  (resolve/serialized-query-source-table serialized-query))
 
 (defn storage-path-prefixes
   "The [[serdes/storage-path]] for Table is a bit tricky, and shared with Fields and FieldValues, so it's
@@ -1742,11 +1748,11 @@
      (into {}
            (for [[k cols] mapping]
              (let [updated-cols (cond
-                                   ;; e.g. [{:sourceId "card:..."} ...]
+                                  ;; e.g. [{:sourceId "card:..."} ...]
                                   (and (coll? cols) (map? (first cols)))
                                   (mapv #(update % :sourceId import-visualizer-source-id) cols)
 
-                                   ;; e.g. ["$_card:<id>_name"] for funnel dimensions
+                                  ;; e.g. ["$_card:<id>_name"] for funnel dimensions
                                   (and (coll? cols) (string? (first cols)))
                                   (mapv import-card-dimension-ref cols)
 
