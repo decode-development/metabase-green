@@ -708,7 +708,12 @@
 (defn- decode-legacy-input
   "Decode `row`s `:legacy_input` JSONB PGobject into a Clojure map."
   [row]
-  (update row :legacy_input decode-pgobject))
+  ;; BOT-1543: some existing rows have legacy_input stored as a JSON string rather than a JSON
+  ;; object, so one decode yields a string; decode once more in that case.
+  (update row :legacy_input
+          (fn [pgo]
+            (let [decoded (decode-pgobject pgo)]
+              (cond-> decoded (string? decoded) json/decode+kw)))))
 
 ;; Search-models whose `mi/can-read?` is a pure function of `:collection_id`, which is
 ;; already denormalized on the index row. Values are the Toucan model whose `can-read?`
@@ -755,16 +760,13 @@
         slow-filtered (filterv (fn [doc] (some-> doc doc->t2 mi/can-read?)) slow-docs)
         result (into fast-filtered slow-filtered)
         time-ms (u/since-ms timer)]
-
     (log/debug "Permission filtering" {:before-count (count docs)
                                        :after-count (count result)
                                        :fast-count (count fast-docs)
                                        :slow-count (count slow-docs)
                                        :slow-fetched-count (count slow-t2-instances)
                                        :time-ms time-ms})
-
     (analytics/inc! :metabase-search/semantic-permission-filter-ms time-ms)
-
     result))
 
 (defn- filter-by-collection-id
@@ -848,7 +850,6 @@
                                (scoring/with-appdb-scores search-context appdb-scorers weights))
             appdb-scores-time-ms (u/since-ms appdb-scores-timer)
             total-time-ms (u/since-ms timer)]
-
         (log/debug "Semantic search"
                    {:search-string-length (count search-string)
                     :raw-results-count (count raw-results)
@@ -858,7 +859,6 @@
                     :filter-time-ms filter-time-ms
                     :appdb-scores-time-ms appdb-scores-time-ms
                     :total-time-ms total-time-ms})
-
         (analytics/inc! :metabase-search/semantic-embedding-ms
                         {:embedding-model (:name embedding-model)}
                         embedding-time-ms)
@@ -870,10 +870,8 @@
         (analytics/inc! :metabase-search/semantic-search-ms
                         {:embedding-model (:name embedding-model)}
                         total-time-ms)
-
         (comment
           (jdbc/execute! db (sql-format-quoted query)))
-
         {:results final-results
          :raw-count (count raw-results)}))))
 

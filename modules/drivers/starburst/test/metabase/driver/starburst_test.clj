@@ -48,7 +48,6 @@
                             (close [_] nil))))]
         (is (true? (sql-jdbc.sync.interface/have-select-privilege?
                     :starburst mock-conn "sales_data" "hive_table")))))
-
     (testing "Returns false when DESCRIBE fails with UNSUPPORTED_TABLE_TYPE error (incompatible table type like Iceberg in Hive catalog)"
       (let [mock-conn (reify Connection
                         (getCatalog [_] "hive")
@@ -62,7 +61,6 @@
                             (close [_] nil))))]
         (is (false? (sql-jdbc.sync.interface/have-select-privilege?
                      :starburst mock-conn "sales_data" "iceberg_table")))))
-
     (testing "Returns false for non-mixed-catalog errors"
       (let [mock-conn (reify Connection
                         (getCatalog [_] "hive")
@@ -354,8 +352,8 @@
 (deftest prepared-statements
   (mt/test-driver :starburst
     (testing "Make sure prepared statements work"
-        ;; If impersonation is set, then the starburst user should be the current Metabase user, i.e. metabase_user@user.com
-        ;; The role is ignored as Metabase users may not have the role defined in the database connection
+      ;; If impersonation is set, then the starburst user should be the current Metabase user, i.e. metabase_user@user.com
+      ;; The role is ignored as Metabase users may not have the role defined in the database connection
       (prepared-statements-helper true)
       (prepared-statements-helper false))))
 
