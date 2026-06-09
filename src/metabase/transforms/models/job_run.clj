@@ -1,11 +1,15 @@
 (ns metabase.transforms.models.job-run
   (:require
+   [metabase.analytics-interface.core :as analytics]
    [metabase.app-db.core :as mdb]
    [metabase.models.interface :as mi]
+   [metabase.transforms.models.timeout-util :as timeout-util]
    [metabase.util.honey-sql-2 :as h2x]
    [methodical.core :as methodical]
    [toucan2.core :as t2]
-   [toucan2.realize :as t2.realize]))
+   [toucan2.realize :as t2.realize])
+  (:import
+   (java.time Instant)))
 
 (set! *warn-on-reflection* true)
 
@@ -77,6 +81,7 @@
                       :is_active nil})))
 
 (defn timeout-old-runs!
+<<<<<<< HEAD
   "Time out all active runs older than the specified age.
 
   Returns the rows that were timed out so callers can take follow-up action
@@ -92,6 +97,26 @@
               :message "Timed out by metabase"})]
     (when (seq pks)
       (t2/select :model/TransformJobRun :id [:in pks]))))
+=======
+  "Time out all active job runs older than the specified age. Returns the rows that
+  were timed out so callers can take follow-up action (e.g. sending notifications).
+  See [[metabase.transforms.models.timeout-util/timeout-rows!]] for atomicity rationale."
+  [age unit]
+  (let [cutoff      (h2x/add-interval-honeysql-form (mdb/db-type) :%now (- age) unit)
+        timeout-dur (timeout-util/unit->duration age unit)
+        detected-at (Instant/now)
+        timed-out   (timeout-util/timeout-rows! :model/TransformJobRun :updated_at cutoff)]
+    (when (seq timed-out)
+      (analytics/inc! :metabase-transforms/timeouts-total
+                      {:type "job"}
+                      (count timed-out))
+      (doseq [run timed-out]
+        (when-let [updated-at (:updated_at run)]
+          (analytics/observe! :metabase-transforms/timeout-detection-latency-ms
+                              {:type "job"}
+                              (timeout-util/detection-latency-ms updated-at timeout-dur detected-at)))))
+    timed-out))
+>>>>>>> v0.62.1
 
 (defn running-run-for-job-id
   "Return a single active job run or nil."
