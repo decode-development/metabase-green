@@ -53,6 +53,10 @@
   ;; to execute INSIDE the `binding` blocks established by the EE postprocessing middlewares below. See
   ;; [[metabase.query-processor.middleware.process-userland-query/capture-execution-context-middleware]] for why.
   [#'qp.process-userland-query/capture-execution-context-middleware
+<<<<<<< HEAD
+=======
+   #'qp.middleware.enterprise/apply-workspace-sql-remapping-middleware
+>>>>>>> v0.62.1
    #'qp.middleware.enterprise/swap-destination-db-middleware
    #'qp.middleware.enterprise/apply-impersonation-postprocessing-middleware
    #'update-used-cards/update-used-cards!

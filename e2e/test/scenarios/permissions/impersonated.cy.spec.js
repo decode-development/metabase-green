@@ -113,12 +113,22 @@ describe("impersonated permission", { tags: "@external" }, () => {
         cy.log("configure caching");
         H.openQuestionActions("Edit settings");
         cy.findByLabelText("When to get new results").click();
+<<<<<<< HEAD
         H.cacheStrategySidesheet().within(() => {
           cy.findByText(/Use default/).click();
           cy.findByText(/Caching settings/).should("be.visible");
           H.durationRadioButton().click();
           cy.findByRole("button", { name: /Save/ }).click();
         });
+=======
+        H.cacheStrategySidesheet()
+          .findByText(/Caching settings/)
+          .should("be.visible");
+        H.selectCacheStrategy(/Duration/);
+        H.cacheStrategySidesheet()
+          .findByRole("button", { name: /Save/ })
+          .click();
+>>>>>>> v0.62.1
 
         cy.log("prime and assert results are cached");
         cy.intercept("POST", "/api/card/*/query").as("query");
