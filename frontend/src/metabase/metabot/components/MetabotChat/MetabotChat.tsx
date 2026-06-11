@@ -9,8 +9,6 @@ import { useSetting } from "metabase/common/hooks";
 import { AIProviderConfigurationModal } from "metabase/metabot/components/AIProviderConfigurationModal";
 import { AIProviderConfigurationNotice } from "metabase/metabot/components/AIProviderConfigurationNotice";
 import { MetabotResetLongChatButton } from "metabase/metabot/components/MetabotChat/MetabotResetLongChatButton";
-import { useSelector } from "metabase/redux";
-import { getIsHosted } from "metabase/setup/selectors";
 import {
   ActionIcon,
   Box,
@@ -53,7 +51,10 @@ export const MetabotChat = ({
 }: {
   config?: MetabotConfig;
 }) => {
+<<<<<<< HEAD
   const isHosted = useSelector(getIsHosted);
+=======
+>>>>>>> v0.62.1
   const [
     isAiProviderConfigurationModalOpen,
     {
@@ -152,7 +153,13 @@ export const MetabotChat = ({
               ) : (
                 <Text c="text-tertiary" maw="12rem" ta="center" lh="lg">
                   {config.emptyText ??
+<<<<<<< HEAD
                     t`I can help you explore your metrics and models.`}
+=======
+                    (showIllustrations
+                      ? t`I can help you explore your metrics and models.`
+                      : t`Explore your metrics and models with AI.`)}
+>>>>>>> v0.62.1
                 </Text>
               )}
             </Flex>
@@ -194,7 +201,6 @@ export const MetabotChat = ({
               }
               isDoingScience={metabot.isDoingScience}
               debug={metabot.debugMode}
-              showFeedbackButtons={isHosted}
             />
             {/* loading */}
             {metabot.isDoingScience && (
