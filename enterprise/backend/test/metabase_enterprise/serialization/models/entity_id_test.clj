@@ -16,6 +16,8 @@
 (def ^:private entities-external-name
   "Entities with external names, so they don't need a generated entity_id."
   #{:model/Channel
+    ;; CustomVizPlugins have unique identifiers.
+    :model/CustomVizPlugin
     ;; Databases have external names based on their URLs; tables are nested under databases; fields under tables.
     :model/Database
     :model/Table
@@ -58,6 +60,7 @@
     :model/CollectionPermissionGraphRevision
     :model/DashboardCardSeries
     :model/LoginHistory
+    :model/McpQueryHandle
     :model/FieldValues
     :model/MetabotConversation
     :model/MetabotFeedback
@@ -66,6 +69,10 @@
     :model/MetabotMessage
     :model/MetabotPermissions
     :model/MetabotSourceFeedback
+<<<<<<< HEAD
+=======
+    :model/MetabotUsedTable
+>>>>>>> v0.62.1
     :model/ModelIndex
     :model/ModelIndexValue
     :model/ModerationReview
@@ -101,6 +108,10 @@
     :model/Revision
     :model/SemanticSearchTokenTracking
     :model/SearchIndexMetadata
+    ;; Workspace remappings are runtime-only; they redirect QP queries against canonical
+    ;; tables to workspace-isolated copies. They aren't portable across instances and
+    ;; aren't included in serdes export/import.
+    :model/TableRemapping
     :model/Secret
     :model/Session
     :model/SupportAccessGrantLog
@@ -124,7 +135,11 @@
     :model/SecurityAdvisory
     :model/CloudMigration
     :model/Comment
-    :model/CommentReaction})
+    :model/CommentReaction
+    ;; Workspace and WorkspaceDatabase are runtime-only -- per-instance workspace
+    ;; provisioning state, not portable content. Same rationale as TableRemapping above.
+    :model/Workspace
+    :model/WorkspaceDatabase})
 
 (deftest ^:parallel comprehensive-entity-id-test
   (let [entity-id-models (->> (v2.entity-ids/toucan-models)
