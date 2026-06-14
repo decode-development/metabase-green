@@ -1,3 +1,4 @@
+import type { Store } from "@reduxjs/toolkit";
 import { Fragment } from "react";
 import {
   IndexRedirect,
@@ -48,11 +49,14 @@ import {
   SetupSsoPage,
 } from "metabase/embedding/embedding-hub";
 import { ModalRoute } from "metabase/hoc/ModalRoute";
+<<<<<<< HEAD
 import {
   AISettingsPage,
   McpSettingsPage,
 } from "metabase/metabot/components/MetabotAdmin/AISettingsPage";
 import { MetabotAdminLayout } from "metabase/metabot/components/MetabotAdmin/MetabotAdminLayout";
+=======
+>>>>>>> v0.62.1
 import { DataModelV1 } from "metabase/metadata/pages/DataModelV1";
 import {
   PLUGIN_ADMIN_TOOLS,
@@ -65,18 +69,22 @@ import {
   PLUGIN_SECURITY_CENTER,
   PLUGIN_SUPPORT,
   PLUGIN_TENANTS,
+  PLUGIN_WORKSPACES,
   PLUGIN_WRITABLE_CONNECTION,
 } from "metabase/plugins";
 import type { State } from "metabase/redux/store";
 import { getTokenFeature } from "metabase/setup";
 
+import { AISettingsPage, McpSettingsPage } from "./ai/AISettingsPage";
+import { MetabotAdminLayout } from "./ai/MetabotAdminLayout";
 import { ModelPersistenceConfiguration } from "./performance/components/ModelPersistenceConfiguration";
 import { StrategyEditorForDatabases } from "./performance/components/StrategyEditorForDatabases";
 import { PerformanceTabId } from "./performance/types";
 import { getSettingsRoutes } from "./settingsRoutes";
 import { ToolsApp } from "./tools/components/ToolsApp";
 import { ToolsUpsell } from "./tools/components/ToolsUpsell";
-import { getTasksRoutes } from "./tools/routes";
+import { getNotificationsRoutes, getTasksRoutes } from "./tools/routes";
+import { UpsellTenants } from "./upsells/UpsellTenants";
 import {
   RedirectToAllowedSettings,
   createAdminRouteGuard,
@@ -84,14 +92,12 @@ import {
 } from "./utils";
 
 export const getRoutes = (
-  store: { getState: () => State },
+  store: Store<State>,
   CanAccessSettings: RouteComponent,
   IsAdmin: RouteComponent,
 ) => {
-  const hasSimpleEmbedding = getTokenFeature(
-    store.getState(),
-    "embedding_simple",
-  );
+  const state = store.getState();
+  const hasSimpleEmbedding = getTokenFeature(state, "embedding_simple");
 
   return (
     <Route path="/admin" component={CanAccessSettings}>
@@ -104,6 +110,7 @@ export const getRoutes = (
           </Route>
           <Route path=":databaseId/edit" component={DatabasePage} />
           {PLUGIN_WRITABLE_CONNECTION.getWritableConnectionInfoRoutes(IsAdmin)}
+          {PLUGIN_WORKSPACES.getAdminConnectionInfoRoutes(IsAdmin)}
           <Route path=":databaseId" component={DatabaseEditApp}>
             {PLUGIN_DB_ROUTING.getDestinationDatabaseRoutes(IsAdmin)}
           </Route>
@@ -161,7 +168,13 @@ export const getRoutes = (
 
             {/* Tenants */}
             <Route path="tenants" component={createTenantsRouteGuard()}>
-              {PLUGIN_TENANTS.tenantsRoutes}
+              {PLUGIN_TENANTS.tenantsRoutes ?? (
+                <>
+                  <IndexRoute component={UpsellTenants} />
+                  <Route path="groups" component={UpsellTenants} />
+                  <Route path="people" component={UpsellTenants} />
+                </>
+              )}
             </Route>
 
             <Route path="" component={PeopleListingApp}>
@@ -245,7 +258,7 @@ export const getRoutes = (
 
         {/* SETTINGS */}
         <Route path="settings" component={createAdminRouteGuard("settings")}>
-          {getSettingsRoutes()}
+          {getSettingsRoutes(store, IsAdmin)}
         </Route>
         {/* PERMISSIONS */}
         <Route path="permissions" component={IsAdmin}>
@@ -321,6 +334,7 @@ export const getRoutes = (
               )}
             </Route>
             <Route path="tasks">{getTasksRoutes()}</Route>
+            <Route path="notifications">{getNotificationsRoutes()}</Route>
             <Route path="jobs" component={JobInfoApp}>
               <ModalRoute
                 path=":jobKey"

@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import type { WithRouterProps } from "react-router";
 import { t } from "ttag";
 
+import { MetabotAdminLayout } from "metabase/admin/ai/MetabotAdminLayout";
 import { skipToken, useGetAdhocQueryMetadataQuery } from "metabase/api";
 import { CodeEditor } from "metabase/common/components/CodeEditor";
 import { ExternalLink } from "metabase/common/components/ExternalLink";
 import { LoadingAndErrorWrapper } from "metabase/common/components/LoadingAndErrorWrapper";
-import { MetabotAdminLayout } from "metabase/metabot/components/MetabotAdmin/MetabotAdminLayout";
 import {
   AgentMessage,
   Messages,
@@ -215,7 +215,10 @@ function FeedbackCard({
             readonly
             hideActions
             getCopyText={noopGetCopyText}
+<<<<<<< HEAD
             showFeedbackButtons={false}
+=======
+>>>>>>> v0.62.1
             submittedFeedback={undefined}
             bg="background-secondary"
             p="md"
