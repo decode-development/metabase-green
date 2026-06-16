@@ -33,7 +33,8 @@
   "The list of all models exported by serialization by default. Used for production code and by tests."
   (concat data-model
           content
-          ["EmbeddingTheme"
+          ["CustomVizPlugin"
+           "EmbeddingTheme"
            "FieldValues"
            "Metabot"
            "PythonLibrary"
@@ -86,6 +87,7 @@
    "HTTPAction"
    "ImplicitAction"
    "LoginHistory"
+   "McpQueryHandle"
    "MetabotConversation"
    "MetabotFeedback"
    "MetabotGroupLimit"
@@ -93,6 +95,10 @@
    "MetabotMessage"
    "MetabotPermissions"
    "MetabotSourceFeedback"
+<<<<<<< HEAD
+=======
+   "MetabotUsedTable"
+>>>>>>> v0.62.1
    "ModelIndex"
    "ModelIndexValue"
    "ModerationReview"
@@ -133,6 +139,7 @@
    "SemanticSearchTokenTracking"
    "Session"
    "SupportAccessGrantLog"
+   "TableRemapping"
    "TaskHistory"
    "TaskRun"
    "Tenant"
@@ -143,4 +150,6 @@
    "User"
    "UserKeyValue"
    "UserParameterValue"
-   "ViewLog"])
+   "ViewLog"
+   "Workspace"
+   "WorkspaceDatabase"])
