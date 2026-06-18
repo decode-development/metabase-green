@@ -27,7 +27,10 @@ import { PageContainer } from "metabase/data-studio/common/components/PageContai
 import { PaneHeader } from "metabase/data-studio/common/components/PaneHeader";
 import { PLUGIN_REPLACEMENT, PLUGIN_TRANSFORMS_PYTHON } from "metabase/plugins";
 import { useSelector } from "metabase/redux";
+<<<<<<< HEAD
 import { getMetadata } from "metabase/selectors/metadata";
+=======
+>>>>>>> v0.62.2
 import { LockedTransformsBanner } from "metabase/transforms/components/LockedTransformsBanner/LockedTransformsBanner";
 import { useTransformPermissions } from "metabase/transforms/hooks/use-transform-permissions";
 import { getShouldShowPythonTransformsUpsell } from "metabase/transforms/selectors";
@@ -56,7 +59,7 @@ import { type TreeNode, getCollectionNodeId, isCollectionNode } from "./types";
 import {
   buildTreeData,
   getDefaultExpandedIds,
-  getIncrementalWarning,
+  useGetTransformWarnings,
 } from "./utils";
 
 const getNodeId = (node: TreeNode) => node.id;
@@ -76,7 +79,7 @@ const countTransforms = (node: TreeNode): number => {
 };
 
 const isRowDisabled = (row: Row<TreeNode>) => {
-  return row.original.source_readable === false;
+  return row.original.can_read === false;
 };
 
 const NODE_ICON_COLORS: Record<TreeNode["nodeType"], ColorName> = {
@@ -140,21 +143,11 @@ export const TransformListPage = ({
   const isLoading =
     isLoadingCollections || isLoadingTransforms || isLoadingDatabases;
   const error = collectionsError ?? transformsError;
-  const metadata = useSelector(getMetadata);
   const shouldShowPythonTransformsUpsell = useSelector(
     getShouldShowPythonTransformsUpsell,
   );
 
-  const warningsByTransformId = useMemo(() => {
-    const warnings = new Map<number, string>();
-    for (const transform of transforms ?? []) {
-      const warning = getIncrementalWarning(transform, metadata);
-      if (warning) {
-        warnings.set(transform.id, warning);
-      }
-    }
-    return warnings;
-  }, [transforms, metadata]);
+  const warningsByTransformId = useGetTransformWarnings(transforms);
 
   const treeData = useMemo(() => {
     const data = buildTreeData(collections, transforms);
@@ -172,7 +165,7 @@ export const TransformListPage = ({
         url: Urls.transformPythonLibrary({
           path: PLUGIN_TRANSFORMS_PYTHON.sharedLibImportPath,
         }),
-        source_readable: transformsDatabases.length > 0,
+        can_read: transformsDatabases.length > 0,
       });
     }
     return data;
@@ -270,8 +263,7 @@ export const TransformListPage = ({
         cell: ({ row }) =>
           isCollectionNode(row.original) ? (
             <CollectionRowMenu
-              collectionId={row.original.collectionId}
-              collectionName={row.original.name}
+              collection={row.original.collection}
               transformCount={countTransforms(row.original)}
             />
           ) : null,

@@ -1,38 +1,108 @@
+<<<<<<< HEAD
+=======
+import dayjs from "dayjs";
+>>>>>>> v0.62.2
 import { useMemo, useState } from "react";
 import { P, match } from "ts-pattern";
 import { t } from "ttag";
 
+<<<<<<< HEAD
 import { getOperatorDefaultValue } from "metabase/querying/common/components/DatePicker/SpecificDatePicker/utils";
 import type { DatePickerOperator } from "metabase/querying/common/types";
 import { DateAllOptionsWidget } from "metabase/querying/parameters/components/DateAllOptionsWidget";
 import { serializeDateParameterValue } from "metabase/querying/parameters/utils/parsing";
+=======
+import { useSetting } from "metabase/common/hooks";
+import { getOperatorDefaultValue } from "metabase/querying/common/components/DatePicker/SpecificDatePicker/utils";
+import type {
+  DatePickerOperator,
+  RelativeIntervalDirection,
+} from "metabase/querying/common/types";
+import { getDateFilterDisplayName } from "metabase/querying/common/utils/dates";
+import { DateAllOptionsWidget } from "metabase/querying/parameters/components/DateAllOptionsWidget";
+import {
+  deserializeDateParameterValue,
+  serializeDateParameterValue,
+} from "metabase/querying/parameters/utils/parsing";
+>>>>>>> v0.62.2
 import { Flex, Icon, Popover, Select } from "metabase/ui";
 
 // width needed to show Previous 12 months option w/ clipping
 const FILTER_WIDTH = 205;
 
 const DATE_OPERATORS: DatePickerOperator[] = ["=", ">", "<", "between"];
+<<<<<<< HEAD
 const FIXED_TYPE_VALUE = "__date_filter_fixed__" as const;
 const RELATIVE_TYPE_VALUE = "__date_filter_relative__" as const;
 
 type ActiveDropdown = "default" | "fixed" | "relative";
+=======
+const RELATIVE_DIRECTIONS: RelativeIntervalDirection[] = ["past", "current"];
+const SPECIFIC_TYPE_VALUE = "__date_filter_specific__" as const;
+const RELATIVE_TYPE_VALUE = "__date_filter_relative__" as const;
+
+type ActiveDropdown = "default" | "specific" | "relative";
+
+const CUSTOM_RANGE_DEFAULT: Record<
+  Exclude<ActiveDropdown, "default">,
+  string
+> = {
+  specific: serializeDateParameterValue(getOperatorDefaultValue("between")),
+  relative: "past30days~",
+};
+>>>>>>> v0.62.2
 
 type ConversationDateFilterProps = {
   value: string | null;
   onChange: (val: string) => void;
 };
 
+<<<<<<< HEAD
+=======
+function getShortcutStartDate(value: string): dayjs.Dayjs | null {
+  const parsed = deserializeDateParameterValue(value);
+  if (parsed?.type !== "relative") {
+    return null;
+  }
+  return dayjs()
+    .add(parsed.offsetValue ?? 0, parsed.offsetUnit ?? "day")
+    .add(Math.min(parsed.value, 0), parsed.unit)
+    .startOf(parsed.unit);
+}
+
+>>>>>>> v0.62.2
 function ConversationDateFilter({
   value,
   onChange,
 }: ConversationDateFilterProps) {
   const [activeDropdown, setActiveDropdown] =
     useState<ActiveDropdown>("default");
+<<<<<<< HEAD
 
   // `~` includes the current period by incrementing the day count, so `pastNdays~` spans N+1 days.
   // To get an N-day window ending today, use `past(N-1)days~`.
   const data = useMemo(
     () => [
+=======
+  const retentionDays = useSetting("ai-usage-max-retention-days");
+  const retentionCutoff = useMemo(
+    () =>
+      retentionDays == null
+        ? null
+        : dayjs().subtract(retentionDays, "day").startOf("day"),
+    [retentionDays],
+  );
+  const todayCutoff = useMemo(() => dayjs().endOf("day"), []);
+
+  // `~` includes the current period by incrementing the day count, so `pastNdays~` spans N+1 days.
+  // To get an N-day window ending today, use `past(N-1)days~`.
+  const data = useMemo(() => {
+    const withinRetention = (item: { value: string }) =>
+      !retentionCutoff ||
+      !getShortcutStartDate(item.value)?.isBefore(retentionCutoff);
+
+    return [
+>>>>>>> v0.62.2
       {
         group: "",
         items: [
@@ -40,7 +110,11 @@ function ConversationDateFilter({
           { label: t`Yesterday`, value: "past1days" },
           { label: t`Last 7 days`, value: "past6days~" },
           { label: t`Last 30 days`, value: "past29days~" },
+<<<<<<< HEAD
         ],
+=======
+        ].filter(withinRetention),
+>>>>>>> v0.62.2
       },
       {
         group: "",
@@ -48,11 +122,16 @@ function ConversationDateFilter({
           { label: t`Previous month`, value: "past1months" },
           { label: t`Previous 3 months`, value: "past3months" },
           { label: t`Previous 12 months`, value: "past12months" },
+<<<<<<< HEAD
         ],
+=======
+        ].filter(withinRetention),
+>>>>>>> v0.62.2
       },
       {
         group: "",
         items: [
+<<<<<<< HEAD
           { label: t`Fixed date range…`, value: FIXED_TYPE_VALUE },
           { label: t`Relative date range…`, value: RELATIVE_TYPE_VALUE },
         ],
@@ -64,18 +143,72 @@ function ConversationDateFilter({
   const handleSelect = (val: string | null) => {
     match(val)
       .with(FIXED_TYPE_VALUE, () => setActiveDropdown("fixed"))
+=======
+          { label: t`Fixed date range…`, value: SPECIFIC_TYPE_VALUE },
+          { label: t`Relative date range…`, value: RELATIVE_TYPE_VALUE },
+        ],
+      },
+    ].filter((group) => group.items.length > 0);
+  }, [retentionCutoff]);
+
+  // when `value` is a specific / relative range, we want to show the item
+  // as highlighted and make sure the correct value is populated in the inner
+  // dropdowns, all while presenting this as the expanded time range to the user
+  // in the input label (e.g. March 15 2026 - March 19 2026)
+  const parsedValue = value ? deserializeDateParameterValue(value) : null;
+  const isKnownItem =
+    value != null &&
+    data.some((group) => group.items.some((item) => item.value === value));
+
+  const selectValue = match({
+    hasValue: value != null,
+    isKnownItem,
+    parsedType: parsedValue?.type,
+  })
+    .with({ hasValue: false }, () => null)
+    .with({ isKnownItem: true }, () => value)
+    .with({ parsedType: "specific" }, () => SPECIFIC_TYPE_VALUE)
+    .with({ parsedType: "relative" }, () => RELATIVE_TYPE_VALUE)
+    .otherwise(() => null);
+
+  const customDisplayName =
+    !isKnownItem && parsedValue
+      ? (getDateFilterDisplayName(parsedValue) ?? undefined)
+      : undefined;
+  const displayLabel =
+    customDisplayName ??
+    data
+      .flatMap((group) => group.items)
+      .find((item) => item.value === selectValue)?.label;
+
+  const handleSelect = (val: string | null) => {
+    match(val)
+      .with(SPECIFIC_TYPE_VALUE, () => setActiveDropdown("specific"))
+>>>>>>> v0.62.2
       .with(RELATIVE_TYPE_VALUE, () => setActiveDropdown("relative"))
       .with(P.string, onChange)
       .with(null, () => {})
       .exhaustive();
   };
 
+<<<<<<< HEAD
   const customRangeSeed = match(activeDropdown)
     .with("fixed", () =>
       serializeDateParameterValue(getOperatorDefaultValue("between")),
     )
     .with("relative", () => "past30days~")
     .with("default", () => null)
+=======
+  const customRangeValue = match({
+    activeDropdown,
+    parsedType: parsedValue?.type,
+  })
+    .with({ activeDropdown: "default" }, () => null)
+    .with({ activeDropdown: "specific", parsedType: "specific" }, () => value)
+    .with({ activeDropdown: "relative", parsedType: "relative" }, () => value)
+    .with({ activeDropdown: "specific" }, () => CUSTOM_RANGE_DEFAULT.specific)
+    .with({ activeDropdown: "relative" }, () => CUSTOM_RANGE_DEFAULT.relative)
+>>>>>>> v0.62.2
     .exhaustive();
 
   return (
@@ -91,21 +224,41 @@ function ConversationDateFilter({
       <Popover.Target>
         <Select
           data={data}
+<<<<<<< HEAD
           value={value}
           onChange={handleSelect}
+=======
+          value={selectValue}
+          searchValue={customDisplayName}
+          onChange={() => {}}
+          onSearchChange={() => {}}
+          onOptionSubmit={handleSelect}
+>>>>>>> v0.62.2
           onDropdownOpen={() => setActiveDropdown("default")}
           w={FILTER_WIDTH}
           bdrs="sm"
           allowDeselect={false}
           leftSection={<Icon name="calendar" />}
+<<<<<<< HEAD
+=======
+          title={displayLabel}
+>>>>>>> v0.62.2
           data-testid="conversation-filters-date-select"
         />
       </Popover.Target>
       <Popover.Dropdown>
         <DateAllOptionsWidget
           key={activeDropdown}
+<<<<<<< HEAD
           value={customRangeSeed}
           availableOperators={DATE_OPERATORS}
+=======
+          value={customRangeValue}
+          availableOperators={DATE_OPERATORS}
+          availableDirections={RELATIVE_DIRECTIONS}
+          minDate={retentionCutoff?.toDate()}
+          maxDate={todayCutoff.toDate()}
+>>>>>>> v0.62.2
           onChange={(val) => {
             onChange(val);
             setActiveDropdown("default");
