@@ -6,7 +6,11 @@ import {
   useMetabotAgent,
   useUserMetabotPermissions,
 } from "metabase/metabot/hooks";
+<<<<<<< HEAD
 import { setIsNativeEditorOpen } from "metabase/query_builder/actions";
+=======
+import { setIsNativeEditorOpen } from "metabase/redux/query-builder";
+>>>>>>> v0.62.2
 
 import { trackQueryFixClicked } from "../../analytics";
 
@@ -25,8 +29,8 @@ jest.mock("metabase/metabot/hooks", () => ({
   useUserMetabotPermissions: jest.fn(),
 }));
 
-jest.mock("metabase/query_builder/actions", () => ({
-  ...jest.requireActual("metabase/query_builder/actions"),
+jest.mock("metabase/redux/query-builder", () => ({
+  ...jest.requireActual("metabase/redux/query-builder"),
   setIsNativeEditorOpen: jest.fn(),
 }));
 

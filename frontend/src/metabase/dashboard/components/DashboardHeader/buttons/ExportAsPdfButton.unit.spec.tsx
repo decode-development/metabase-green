@@ -1,7 +1,11 @@
 import userEvent from "@testing-library/user-event";
 
 import { renderWithProviders, screen, waitFor } from "__support__/ui";
+<<<<<<< HEAD
 import { MockDashboardContext } from "metabase/public/containers/PublicOrEmbeddedDashboard/mock-context";
+=======
+import { MockDashboardContext } from "metabase/dashboard/context/mock-context";
+>>>>>>> v0.62.2
 import { createMockDashboardState } from "metabase/redux/store/mocks";
 import { createMockDashboard } from "metabase-types/api/mocks";
 
