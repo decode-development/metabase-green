@@ -1,16 +1,25 @@
 (ns metabase.mcp.scope
   "Scope matching for MCP tools and resources.
 
+<<<<<<< HEAD
    Wraps [[metabase.api-scope.core/scope-matches?]] with the conventions used by
    MCP entry points: nil token-scopes (internal callers) and the `::scope/unrestricted`
    sentinel (session auth or unscoped JWT) both bypass the check."
   (:require
    [metabase.api-scope.core :as api-scope]
    [metabase.api.macros.scope :as scope]))
+=======
+   Wraps [[metabase.api.macros.scope/scope-satisfied?]] with the conventions used by
+   MCP entry points: nil token-scopes (internal callers) and the `::scope/unrestricted`
+   sentinel (session auth or unscoped JWT) both bypass the check."
+  (:require
+   [metabase.api.macros.scope :as api.scope]))
+>>>>>>> v0.62.2
 
 (defn matches?
   "Does `token-scopes` grant access to an entity with the given `required-scope`?
    - nil `token-scopes` always matches (internal callers).
+<<<<<<< HEAD
    - `::scope/unrestricted` in `token-scopes` always matches.
    - nil `required-scope` only matches the two cases above (callers that want
      \"public to any authenticated MCP user\" should use [[public-or-matches?]]).
@@ -20,6 +29,17 @@
       (contains? token-scopes ::scope/unrestricted)
       (boolean (and (some? required-scope)
                     (api-scope/scope-matches? token-scopes required-scope)))))
+=======
+   - `::api.scope/unrestricted` in `token-scopes` always matches.
+   - nil `required-scope` only matches the two cases above (callers that want
+     \"public to any authenticated MCP user\" should use [[public-or-matches?]]).
+   - Otherwise delegates wildcard/exact matching to [[api.scope/scope-satisfied?]]."
+  [token-scopes required-scope]
+  (or (nil? token-scopes)
+      (contains? token-scopes ::api.scope/unrestricted)
+      (boolean (and (some? required-scope)
+                    (api.scope/scope-satisfied? token-scopes required-scope)))))
+>>>>>>> v0.62.2
 
 (defn public-or-matches?
   "Like [[matches?]] but treats a nil `required-scope` as \"public to any caller\"
