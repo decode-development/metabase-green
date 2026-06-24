@@ -25,7 +25,10 @@ import {
   Collapse,
   Flex,
   Icon,
+<<<<<<< HEAD
   type IconName,
+=======
+>>>>>>> v0.62.2
   Skeleton,
   Text,
   Tooltip,
@@ -36,6 +39,10 @@ import * as Lib from "metabase-lib";
 import Question from "metabase-lib/v1/Question";
 import type {
   DatasetQuery,
+<<<<<<< HEAD
+=======
+  IconName,
+>>>>>>> v0.62.2
   MetabotCodeEdit,
   MetabotCodeEditorBufferContext,
   MetabotSourceFeedback,
@@ -154,7 +161,11 @@ const SourceItem = ({
         to={to}
         href={to}
       >
+<<<<<<< HEAD
         <Flex direction="column" gap="0.25rem" miw={0} maw="100%">
+=======
+        <Flex direction="column" miw={0} maw="100%">
+>>>>>>> v0.62.2
           <Flex gap="sm" align="center" miw={0} maw="100%">
             <Icon
               name={iconName}
@@ -171,7 +182,11 @@ const SourceItem = ({
                 overflow: "hidden",
                 fontSize: "0.75rem",
                 fontWeight: 700,
+<<<<<<< HEAD
                 lineHeight: 1,
+=======
+                lineHeight: 1.5,
+>>>>>>> v0.62.2
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
@@ -204,9 +219,15 @@ const SourceItem = ({
                     miw={0}
                     c="text-secondary"
                     style={{
+<<<<<<< HEAD
                       overflowX: "hidden",
                       fontSize: "0.75rem",
                       lineHeight: 1,
+=======
+                      overflow: "hidden",
+                      fontSize: "0.75rem",
+                      lineHeight: 1.5,
+>>>>>>> v0.62.2
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
                     }}
@@ -379,7 +400,11 @@ const TableSourceRow = ({
       location={location}
       messageId={messageId}
       source={{ source_id: id, source_type: "table" }}
+<<<<<<< HEAD
       to={Urls.tableRowsQuery(table.db_id, id)}
+=======
+      to={Urls.table({ id, name: table.display_name })}
+>>>>>>> v0.62.2
     />
   );
 };
@@ -595,7 +620,11 @@ const NativeSourcesRow = ({
             location={location}
             messageId={messageId}
             source={{ source_id: table.id, source_type: "table" }}
+<<<<<<< HEAD
             to={Urls.tableRowsQuery(databaseId, table.id)}
+=======
+            to={Urls.table({ id: table.id, name: label })}
+>>>>>>> v0.62.2
           />
         );
       })}

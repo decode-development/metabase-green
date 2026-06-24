@@ -92,7 +92,6 @@
     (if (and (task/job-exists? task.search-index/reindex-job-key) (or (not ingestion/*force-sync*) config/is-test?))
       (do (task/trigger-now! task.search-index/reindex-job-key) {:message "task triggered"})
       (do (search/reindex!) {:message "reindex triggered"}))
-
     (throw (ex-info "Search index is not supported for this installation." {:status-code 501}))))
 
 (mu/defn- set-weights!
@@ -259,7 +258,8 @@
                 :non-temporal-dim-ids                (process-non-temporal-dim-ids non-temporal-dim-ids)
                 :has-temporal-dim                    has-temporal-dim
                 :display-type                        (set display-type)}))
-      (analytics/inc! :metabase-search/response-ok))
+      (analytics/inc! :metabase-search/response-ok)
+      (analytics/observe! :metabase-search/response-results (:total <>)))
     (catch Exception e
       (let [status-code (:status-code (ex-data e))]
         (when (or (not status-code) (= 5 (quot status-code 100)))
