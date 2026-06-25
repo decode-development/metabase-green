@@ -1,9 +1,12 @@
+<<<<<<< HEAD
 import {
   getClickBehavior,
   getClickBehaviorData,
   getParameterIdValuePairs,
   getParameterValuesBySlug,
 } from "metabase/dashboard/utils/dashboard-click-drill";
+=======
+>>>>>>> v0.62.3
 import type { ParameterValues } from "metabase/embedding-sdk/types/dashboard";
 import type { DashboardTabId, ParameterValueOrArray } from "metabase-types/api";
 
@@ -17,6 +20,12 @@ import { DashboardClickAction } from "../actions/DashboardClickAction";
 import { ExtractColumnAction } from "../actions/ExtractColumnAction";
 import { HideColumnAction } from "../actions/HideColumnAction";
 import { NativeQueryClickFallback } from "../actions/NativeQueryClickFallback";
+import {
+  getClickBehavior,
+  getClickBehaviorData,
+  getParameterIdValuePairs,
+  getParameterValuesBySlug,
+} from "../lib/dashboard-click-drill";
 
 export type ClickBehaviorTarget = {
   type: "dashboard" | "question";

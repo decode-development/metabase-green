@@ -380,7 +380,11 @@ describe("MetabotAgentDataSourcePills", () => {
 
     const sourceLink = await screen.findByRole("link", { name: "Orders" });
 
+<<<<<<< HEAD
     expect(sourceLink).toHaveAttribute("href", "/question#?db=1&table=2");
+=======
+    expect(sourceLink).toHaveAttribute("href", "/table/2-orders");
+>>>>>>> v0.62.3
     expect(
       screen.queryByLabelText("Source is correct"),
     ).not.toBeInTheDocument();

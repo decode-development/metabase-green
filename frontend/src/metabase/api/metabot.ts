@@ -9,6 +9,10 @@ import type {
   MetabotSettingsResponse,
   MetabotSlackSettings,
   MetabotSourceFeedback,
+<<<<<<< HEAD
+=======
+  RegenerateSuggestedMetabotPromptsResponse,
+>>>>>>> v0.62.3
   SuggestedMetabotPromptsRequest,
   SuggestedMetabotPromptsResponse,
   UpdateMetabotSettingsRequest,
@@ -97,7 +101,10 @@ export const metabotApi = Api.injectEndpoints({
           idTag("metabot-prompt-suggestions", metabot_id),
         ]),
     }),
-    regenerateSuggestedMetabotPrompts: builder.mutation<void, MetabotId>({
+    regenerateSuggestedMetabotPrompts: builder.mutation<
+      RegenerateSuggestedMetabotPromptsResponse,
+      MetabotId
+    >({
       query: (metabot_id) => ({
         method: "POST",
         url: `/api/metabot/metabot/${metabot_id}/prompt-suggestions/regenerate`,

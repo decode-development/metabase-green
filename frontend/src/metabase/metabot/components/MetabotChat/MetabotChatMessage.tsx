@@ -27,11 +27,10 @@ import {
   Flex,
   type FlexProps,
   Icon,
-  type IconName,
   Text,
   Tooltip,
 } from "metabase/ui";
-import type { MetabotFeedback } from "metabase-types/api";
+import type { IconName, MetabotFeedback } from "metabase-types/api";
 
 import { AIMarkdown } from "../AIMarkdown/AIMarkdown";
 
@@ -172,7 +171,10 @@ interface AgentMessageProps extends Omit<BaseMessageProps, "message"> {
   readonly: boolean;
   onRetry?: (messageId: string) => void;
   getCopyText: () => string;
+<<<<<<< HEAD
   showFeedbackButtons: boolean;
+=======
+>>>>>>> v0.62.3
   setFeedbackMessage?: (data: { messageId: string; positive: boolean }) => void;
   submittedFeedback: "positive" | "negative" | undefined;
   onInternalLinkClick?: (link: string) => void;
@@ -185,7 +187,6 @@ export const AgentMessage = ({
   readonly,
   getCopyText,
   onRetry,
-  showFeedbackButtons,
   setFeedbackMessage,
   submittedFeedback,
   onInternalLinkClick,
@@ -193,11 +194,15 @@ export const AgentMessage = ({
   ...props
 }: AgentMessageProps) => {
   const messageId = "externalId" in message ? (message.externalId ?? "") : "";
+<<<<<<< HEAD
   const canGiveFeedback = !!(
     showFeedbackButtons &&
     setFeedbackMessage &&
     messageId
   );
+=======
+  const canGiveFeedback = !!(setFeedbackMessage && messageId);
+>>>>>>> v0.62.3
   const clipboard = useClipboard({ timeout: 2000 });
 
   return (
@@ -416,7 +421,6 @@ export const Messages = ({
   isDoingScience,
   debug,
   readonly = false,
-  showFeedbackButtons = false,
   onInternalLinkClick,
 }: {
   messages: MetabotChatMessage[];
@@ -424,7 +428,6 @@ export const Messages = ({
   isDoingScience: boolean;
   debug: boolean;
   readonly?: boolean;
-  showFeedbackButtons?: boolean;
   onInternalLinkClick?: (navigateToPath: string) => void;
 }) => {
   const visibleMessages = useMemo(
@@ -472,6 +475,7 @@ export const Messages = ({
       return textMessages.map((msg) => msg.message).join("\n\n");
     },
     [messages],
+<<<<<<< HEAD
   );
 
   const setFeedbackModal = useCallback(
@@ -483,6 +487,8 @@ export const Messages = ({
       setFeedbackState((prev) => ({ ...prev, modal: data }));
     },
     [showFeedbackButtons],
+=======
+>>>>>>> v0.62.3
   );
 
   return (
@@ -498,8 +504,14 @@ export const Messages = ({
             readonly={readonly}
             onRetry={onRetryMessage}
             getCopyText={() => getAgentReplyCopyText(message.id)}
+<<<<<<< HEAD
             showFeedbackButtons={showFeedbackButtons}
             setFeedbackMessage={setFeedbackModal}
+=======
+            setFeedbackMessage={(data) =>
+              setFeedbackState((prev) => ({ ...prev, modal: data }))
+            }
+>>>>>>> v0.62.3
             submittedFeedback={
               "externalId" in message && message.externalId
                 ? feedbackState.submitted[message.externalId]
@@ -521,7 +533,9 @@ export const Messages = ({
       {feedbackState.modal && (
         <MetabotFeedbackModal
           {...feedbackState.modal}
-          onClose={() => setFeedbackModal(undefined)}
+          onClose={() =>
+            setFeedbackState((prev) => ({ ...prev, modal: undefined }))
+          }
           onSubmit={submitFeedback}
         />
       )}
