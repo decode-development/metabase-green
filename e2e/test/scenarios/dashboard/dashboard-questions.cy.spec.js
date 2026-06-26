@@ -815,6 +815,7 @@ describe("Dashboard > Dashboard Questions", () => {
         cy.button("Save").click();
       });
 
+<<<<<<< HEAD
       H.saveDashboard();
       H.getDashboardCard().within(() => {
         H.echartsContainer().should("be.visible").and("not.be.empty");
@@ -824,6 +825,28 @@ describe("Dashboard > Dashboard Questions", () => {
           .click();
       });
 
+=======
+      // The modal-save dispatches a dashcard update; the dashboard's
+      // "dirty" flag only flips once that commits. Wait for the modal to
+      // unmount before H.saveDashboard so the edit-bar Save sees the new
+      // dashcard state — otherwise its early-return-if-unchanged path
+      // skips the PUT (no @saveDashboardCards request ever fires).
+      H.modal().should("not.exist");
+      H.getDashboardCard()
+        .findAllByTestId("legend-item")
+        .filter(':contains("Blue Question")')
+        .should("exist");
+
+      H.saveDashboard();
+      H.getDashboardCard().within(() => {
+        H.echartsContainer().should("be.visible").and("not.be.empty");
+        cy.log("Visit the question directly from a dashcard");
+        cy.findAllByTestId("legend-item")
+          .filter(":contains(Blue Question)")
+          .click();
+      });
+
+>>>>>>> v0.62.3
       cy.log("Move the question to an entirely different dashboard");
       H.openQuestionActions("Move");
 
