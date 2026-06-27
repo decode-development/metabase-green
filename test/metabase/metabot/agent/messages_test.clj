@@ -81,21 +81,39 @@
     (is (=? [{:role :user :content #(str/ends-with? % "Hello")}]
             (messages/build-message-history
              {}
+<<<<<<< HEAD
              (memory/initialize [{:role :user :content "Hello"}] {})))))
+=======
+             (memory/initialize [{:role :user :content "Hello"}] {}))))))
+
+(deftest ^:parallel build-message-history-test-2
+>>>>>>> v0.62.3
   (testing "includes assistant text from input"
     (is (=? [{:role :user :content "Hello"}
              {:type :text :text "Hi there"}]
             (messages/build-message-history
              {}
              (memory/initialize [{:role :user :content "Hello"}
+<<<<<<< HEAD
                                  {:role :assistant :content "Hi there"}] {})))))
+=======
+                                 {:role :assistant :content "Hi there"}] {}))))))
+
+(deftest ^:parallel build-message-history-test-3
+>>>>>>> v0.62.3
   (testing "includes step parts from memory"
     (is (=? [{:role :user :content #(str/ends-with? % "Hello")}
              {:type :text :text "Response text"}]
             (messages/build-message-history
              {}
              (-> (memory/initialize [{:role :user :content "Hello"}] {})
+<<<<<<< HEAD
                  (memory/add-step [{:type :text :text "Response text"}]))))))
+=======
+                 (memory/add-step [{:type :text :text "Response text"}])))))))
+
+(deftest ^:parallel build-message-history-test-4
+>>>>>>> v0.62.3
   (testing "includes tool calls from steps"
     (is (=? [{:role :user :content #(str/ends-with? % "Search for revenue")}
              {:type :tool-input :id "t1" :function "search" :arguments {:query "revenue"}}]
@@ -105,7 +123,13 @@
                  (memory/add-step [{:type      :tool-input
                                     :id        "t1"
                                     :function  "search"
+<<<<<<< HEAD
                                     :arguments {:query "revenue"}}]))))))
+=======
+                                    :arguments {:query "revenue"}}])))))))
+
+(deftest ^:parallel build-message-history-test-5
+>>>>>>> v0.62.3
   (testing "includes tool results from steps"
     (is (=? [{:role :user :content #(str/ends-with? % "Search")}
              {:type :tool-input :id "t1" :function "search"}
@@ -114,7 +138,13 @@
              {}
              (-> (memory/initialize [{:role :user :content "Search"}] {})
                  (memory/add-step [{:type :tool-input :id "t1" :function "search" :arguments {:query "test"}}])
+<<<<<<< HEAD
                  (memory/add-step [{:type :tool-output :id "t1" :result {:data []}}]))))))
+=======
+                 (memory/add-step [{:type :tool-output :id "t1" :result {:data []}}])))))))
+
+(deftest ^:parallel build-message-history-test-6
+>>>>>>> v0.62.3
   (testing "handles multiple iterations"
     (is (=? [{:role :user :content #(str/ends-with? % "Hello")}
              {:type :tool-input :id "t1"}
@@ -125,7 +155,13 @@
              (-> (memory/initialize [{:role :user :content "Hello"}] {})
                  (memory/add-step [{:type :tool-input :id "t1" :function "search" :arguments {}}])
                  (memory/add-step [{:type :tool-output :id "t1" :result {:data []}}])
+<<<<<<< HEAD
                  (memory/add-step [{:type :text :text "Found results"}]))))))
+=======
+                 (memory/add-step [{:type :text :text "Found results"}])))))))
+
+(deftest ^:parallel build-message-history-test-7
+>>>>>>> v0.62.3
   (testing "filters out non-message parts from steps"
     (is (=? [{:role :user :content #(str/ends-with? % "Hello")}
              {:type :text :text "Response"}]
@@ -134,7 +170,13 @@
              (-> (memory/initialize [{:role :user :content "Hello"}] {})
                  (memory/add-step [{:type :start :messageId "m1"}
                                    {:type :text :text "Response"}
+<<<<<<< HEAD
                                    {:type :usage :usage {:promptTokens 10}}]))))))
+=======
+                                   {:type :usage :usage {:promptTokens 10}}])))))))
+
+(deftest ^:parallel build-message-history-test-8
+>>>>>>> v0.62.3
   (testing "merges consecutive assistant messages from input history"
     ;; Frontend may send separate text and tool_calls messages
     (is (=? [{:role :user :content "Hello"}

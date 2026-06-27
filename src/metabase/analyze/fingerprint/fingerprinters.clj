@@ -14,9 +14,15 @@
    [metabase.util.performance :as perf]
    [redux.core :as redux])
   (:import
+<<<<<<< HEAD
    (java.time Instant LocalDate LocalDateTime LocalTime OffsetDateTime OffsetTime ZonedDateTime ZoneOffset)
    (java.time.chrono ChronoLocalDateTime ChronoZonedDateTime)
    (java.time.temporal ChronoField Temporal)
+=======
+   (java.time ZoneOffset)
+   (java.time.chrono ChronoLocalDateTime ChronoZonedDateTime)
+   (java.time.temporal Temporal)
+>>>>>>> v0.62.3
    (org.apache.commons.codec.digest MurmurHash2)
    (org.apache.commons.math3.stat.descriptive SummaryStatistics)
    (org.apache.datasketches.hll HllSketch)
@@ -263,8 +269,16 @@
   (invoke [this x]
     (set! total (inc total))
     (when-not (nil? x)
+<<<<<<< HEAD
       (cond (contains? counts x)                        (set! counts (update counts x inc))
             (< (count counts) mode-stats-max-distinct)  (set! counts (assoc counts x 1))))
+=======
+      ;; Key the frequency map on (hash x), not x itself: mode-fraction / top-3-fraction need only
+      ;; value frequencies, never the values, and retaining raw values is high memory cost.
+      (let [k (hash x)]
+        (cond (contains? counts k)                        (set! counts (update counts k inc))
+              (< (count counts) mode-stats-max-distinct)  (set! counts (assoc counts k 1)))))
+>>>>>>> v0.62.3
     this))
 
 (defn- mode-stats
@@ -275,6 +289,7 @@
   ([] (->ModeStatsTracker {} 0))
   ([tracker] (tracker))
   ([tracker x] (tracker x)))
+<<<<<<< HEAD
 
 (defn- ->millis-from-epoch
   "Coerce a `java.time.temporal.Temporal` (as produced by `->temporal`) to long epoch millis.
@@ -343,16 +358,15 @@
   "Reducer producing a 24-element vector of per-hour fractions (0..23)."
   []
   (bucket-distribution 24 temporal->hour))
+=======
+>>>>>>> v0.62.3
 
 (deffingerprinter :type/DateTime
   ((map ->temporal)
    (redux/post-complete
-    (robust-fuse {:earliest             earliest
-                  :latest               latest
-                  :skewness             ((keep ->millis-from-epoch) stats/skewness)
-                  :mode-stats           ((keep ->millis-from-epoch) mode-stats)
-                  :weekday-distribution (weekday-distribution)
-                  :hour-distribution    (hour-distribution)})
+    (robust-fuse {:earliest   earliest
+                  :latest     latest
+                  :mode-stats ((filter some?) mode-stats)})
     (fn [{:keys [mode-stats] :as fused}]
       (-> fused
           (dissoc :mode-stats)
@@ -434,8 +448,6 @@
                   :percent-state  (stats/share u/state?)
                   :percent-blank  (stats/share str/blank?)
                   :average-length ((map count) stats/mean)
-                  :min-length     ((map count) stats/min)
-                  :max-length     ((map count) stats/max)
                   :mode-stats     mode-stats})
     (fn [{:keys [mode-stats] :as fused}]
       (-> fused

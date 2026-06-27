@@ -58,7 +58,11 @@
    [metabase.metabot.tools.entity-details :as entity-details]
    [metabase.metabot.tools.field-stats :as field-stats]
    [metabase.metabot.tools.shared.instructions :as instructions]
+<<<<<<< HEAD
    [metabase.metabot.tools.shared.llm-representations :as llm-rep]
+=======
+   [metabase.metabot.tools.shared.llm-shape :as llm-shape]
+>>>>>>> v0.62.3
    [metabase.models.interface :as mi]
    [metabase.transforms.core :as transforms]
    [metabase.util.log :as log]
@@ -151,7 +155,11 @@
    :name        name
    :engine      (some-> engine clojure.core/name)
    :description description
+<<<<<<< HEAD
    :uri         (llm-rep/metabase-uri :database id)})
+=======
+   :uri         (llm-shape/metabase-uri :database id)})
+>>>>>>> v0.62.3
 
 (defn- present-collection
   "Trim a collection row to an item map. `path-name` may be supplied if the caller pre-computed it."
@@ -165,7 +173,11 @@
     :authority_level   authority_level
     :is_personal       (boolean personal_owner_id)
     :description       description
+<<<<<<< HEAD
     :uri               (llm-rep/metabase-uri :collection id)}))
+=======
+    :uri               (llm-shape/metabase-uri :collection id)}))
+>>>>>>> v0.62.3
 
 (defn- present-table
   [{:keys [id name display_name schema db_id description]}]
@@ -176,7 +188,11 @@
    :schema       schema
    :database_id  db_id
    :description  description
+<<<<<<< HEAD
    :uri          (llm-rep/metabase-uri :table id)})
+=======
+   :uri          (llm-shape/metabase-uri :table id)})
+>>>>>>> v0.62.3
 
 (defn- present-card
   "Cards (questions or models) — :type on a Card is :question / :model / :metric."
@@ -193,7 +209,11 @@
      :database_id   database_id
      :table_id      table_id
      :description   description
+<<<<<<< HEAD
      :uri           (llm-rep/metabase-uri (keyword model-type) id)}))
+=======
+     :uri           (llm-shape/metabase-uri (keyword model-type) id)}))
+>>>>>>> v0.62.3
 
 (defn- present-dashboard
   [{:keys [id name collection_id description]}]
@@ -202,7 +222,11 @@
    :name          name
    :collection_id collection_id
    :description   description
+<<<<<<< HEAD
    :uri           (llm-rep/metabase-uri :dashboard id)})
+=======
+   :uri           (llm-shape/metabase-uri :dashboard id)})
+>>>>>>> v0.62.3
 
 (defn- present-transform
   [{:keys [id name description source_database_id]}]
@@ -211,7 +235,11 @@
    :name        name
    :database_id source_database_id
    :description description
+<<<<<<< HEAD
    :uri         (llm-rep/metabase-uri :transform id)})
+=======
+   :uri         (llm-shape/metabase-uri :transform id)})
+>>>>>>> v0.62.3
 
 (defn- present-source-card
   "Resolve a source-card id to a typed item map (model / metric / question)."
@@ -223,7 +251,11 @@
                    "question")]
     {:type src-type
      :id   source-card-id
+<<<<<<< HEAD
      :uri  (llm-rep/metabase-uri (keyword src-type) source-card-id)}))
+=======
+     :uri  (llm-shape/metabase-uri (keyword src-type) source-card-id)}))
+>>>>>>> v0.62.3
 
 ;; ----- Lineage helpers -----
 
@@ -233,10 +265,17 @@
   (cond-> []
     database_id    (conj {:type "database"
                           :id   database_id
+<<<<<<< HEAD
                           :uri  (llm-rep/metabase-uri :database database_id)})
     table_id       (conj {:type "table"
                           :id   table_id
                           :uri  (llm-rep/metabase-uri :table table_id)})
+=======
+                          :uri  (llm-shape/metabase-uri :database database_id)})
+    table_id       (conj {:type "table"
+                          :id   table_id
+                          :uri  (llm-shape/metabase-uri :table table_id)})
+>>>>>>> v0.62.3
     source_card_id (conj (present-source-card source_card_id))))
 
 (defn- transform-source-table-ids
@@ -296,7 +335,11 @@
                            :id        id
                            :name      name
                            :timestamp timestamp
+<<<<<<< HEAD
                            :uri       (llm-rep/metabase-uri (keyword type) id)}))
+=======
+                           :uri       (llm-shape/metabase-uri (keyword type) id)}))
+>>>>>>> v0.62.3
                       recents)]
     (list-result :recent-items items)))
 
@@ -344,7 +387,11 @@
                              {:type        "schema"
                               :name        s
                               :database_id db-id
+<<<<<<< HEAD
                               :uri         (llm-rep/metabase-uri :database db-id "schemas" s "tables")})))]
+=======
+                              :uri         (llm-shape/metabase-uri :database db-id "schemas" s "tables")})))]
+>>>>>>> v0.62.3
     (list-result :database-schemas schemas)))
 
 (defn- fetch-database-schema-tables [id-str schema-name]
@@ -508,7 +555,11 @@
         items            (cond-> []
                            db-id         (conj {:type "database"
                                                 :id   db-id
+<<<<<<< HEAD
                                                 :uri  (llm-rep/metabase-uri :database db-id)})
+=======
+                                                :uri  (llm-shape/metabase-uri :database db-id)})
+>>>>>>> v0.62.3
                            source-tables (into source-tables))]
     (list-result :transform-sources items)))
 
@@ -524,7 +575,11 @@
         items        (cond-> []
                        db-id        (conj {:type "database"
                                            :id   db-id
+<<<<<<< HEAD
                                            :uri  (llm-rep/metabase-uri :database db-id)})
+=======
+                                           :uri  (llm-shape/metabase-uri :database db-id)})
+>>>>>>> v0.62.3
                        target-table (conj (present-table target-table)))]
     (list-result :transform-target items)))
 
@@ -637,20 +692,26 @@
 
 (defn- format-content
   "Format a tool result as an LLM-ready string.
-   Dispatches to the right llm-rep formatter based on :result-type.
+   Dispatches to the right llm-shape formatter based on :result-type.
    Returns the :output string directly for error results (404s etc.)."
   [content]
   (if-let [structured (:structured-output content)]
     (case (:result-type structured)
       ;; NOTE: keep in sync with agent/tools/metadata.clj/format-field-metadata-output
       :field-metadata (format-with-instructions
-                       (llm-rep/field-metadata->xml structured)
+                       (llm-shape/field-metadata->xml structured)
                        instructions/field-metadata-instructions)
+<<<<<<< HEAD
       :entity         (llm-rep/entity->xml structured)
       :metabot-list   (llm-rep/metabot-list->xml structured)
       :metabot-entity (llm-rep/metabot-entity->xml structured)
+=======
+      :entity         (llm-shape/entity->xml structured)
+      :metabot-list   (llm-shape/metabot-list->xml structured)
+      :metabot-entity (llm-shape/metabot-entity->xml structured)
+>>>>>>> v0.62.3
       ;; fallback — should not happen, but better than EDN
-      (llm-rep/entity->xml structured))
+      (llm-shape/entity->xml structured))
     ;; error case — :output is already a string
     (:formatted content)))
 

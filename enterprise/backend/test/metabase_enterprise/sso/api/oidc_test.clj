@@ -107,10 +107,17 @@
     (mt/with-additional-premium-features #{:sso-oidc}
       (mt/with-temporary-setting-values [oidc-providers []]
         (testing "oidc-enabled is false with no providers"
+<<<<<<< HEAD
           (is (false? (sso-settings/oidc-enabled?)))))
       (mt/with-temporary-setting-values [oidc-providers [(assoc test-provider :enabled true)]]
         (testing "oidc-configured is true when provider has required fields"
           (is (true? (sso-settings/oidc-enabled?)))))
+=======
+          (is (false? (sso-settings/oidc-enabled)))))
+      (mt/with-temporary-setting-values [oidc-providers [(assoc test-provider :enabled true)]]
+        (testing "oidc-configured is true when provider has required fields"
+          (is (true? (sso-settings/oidc-enabled)))))
+>>>>>>> v0.62.3
       (mt/with-temporary-setting-values [oidc-providers [(assoc test-provider :enabled false)]]
         (testing "oidc-enabled is false when no provider is enabled"
-          (is (false? (sso-settings/oidc-enabled?))))))))
+          (is (false? (sso-settings/oidc-enabled))))))))

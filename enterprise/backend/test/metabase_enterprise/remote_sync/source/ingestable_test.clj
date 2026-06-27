@@ -141,12 +141,24 @@
       (testing "ingest-errors returns the parse failure"
         (let [errors (serialization/ingest-errors ingestable)]
           (is (= 1 (count errors)))
+<<<<<<< HEAD
           (is (instance? Exception (first errors)))))))
+=======
+          (is (instance? Exception (first errors))))))))
+
+(deftest ingest-errors-test-2
+>>>>>>> v0.62.3
   (testing "ingest-errors returns [] when all files parse successfully"
     (let [snapshot   (source.p/snapshot (test-helpers/create-mock-source))
           ingestable (ingestable/->IngestableSnapshot snapshot (atom nil) (atom []))]
       (serialization/ingest-list ingestable)
+<<<<<<< HEAD
       (is (= [] (serialization/ingest-errors ingestable)))))
+=======
+      (is (= [] (serialization/ingest-errors ingestable))))))
+
+(deftest ingest-errors-test-3
+>>>>>>> v0.62.3
   (testing "ingest-errors returns [] before cache is populated"
     (let [bad-yaml  "name: Bad Card\ndataset_query: [invalid\n"
           files     {"main" {"collections/coll01xxxxxxxxxxxxx_test/coll01xxxxxxxxxxxxx_test.yaml"
@@ -156,7 +168,13 @@
           snapshot  (source.p/snapshot (test-helpers/create-mock-source :initial-files files))
           ingestable (ingestable/->IngestableSnapshot snapshot (atom nil) (atom []))]
       (is (= [] (serialization/ingest-errors ingestable))
+<<<<<<< HEAD
           "Before ingest-list is called, ingest-errors should return [] not the real errors")))
+=======
+          "Before ingest-list is called, ingest-errors should return [] not the real errors"))))
+
+(deftest ingest-errors-test-4
+>>>>>>> v0.62.3
   (testing "multiple bad files produce multiple errors"
     (let [bad-yaml-1 "name: Bad1\ndataset_query: [invalid\n"
           bad-yaml-2 "name: Bad2\ndataset_query: {broken\n"
@@ -170,7 +188,13 @@
           ingestable (ingestable/->IngestableSnapshot snapshot (atom nil) (atom []))]
       (serialization/ingest-list ingestable)
       (is (= 2 (count (serialization/ingest-errors ingestable)))
+<<<<<<< HEAD
           "Each unparseable file should produce a separate error")))
+=======
+          "Each unparseable file should produce a separate error"))))
+
+(deftest ingest-errors-test-5
+>>>>>>> v0.62.3
   (testing "wrapper ingestables delegate ingest-errors"
     (let [bad-yaml  "name: Bad\ndataset_query: [invalid\n"
           files     {"main" {"collections/coll01xxxxxxxxxxxxx_test/coll01xxxxxxxxxxxxx_test.yaml"

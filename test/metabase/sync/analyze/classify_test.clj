@@ -208,8 +208,13 @@
                     :preview_display true
                     :fingerprint_version i/*latest-fingerprint-version*
                     :last_analyzed nil}]
+<<<<<<< HEAD
       (with-redefs [classifiers.no-preview-display/infer-no-preview-display
                     (fn [field _] (assoc field :preview_display false))]
+=======
+      (mt/with-dynamic-fn-redefs [classifiers.no-preview-display/infer-no-preview-display
+                                  (fn [field _] (assoc field :preview_display false))]
+>>>>>>> v0.62.3
         (classify/classify-fields! table))
       (let [updated-field (t2/select-one :model/Field :id (u/the-id field))]
         (is (not= :type/Name (:semantic_type updated-field)))

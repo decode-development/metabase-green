@@ -91,6 +91,7 @@
           (testing "TextWrapper cell with original value of empty string should receive color"
             (is (= red (js.color/get-background-color color-selector (formatter/->TextWrapper "" "") "test" 0))))
           (testing "TextWrapper cell with original value of nil should not receive color"
+<<<<<<< HEAD
             (is (nil? (js.color/get-background-color color-selector (formatter/->TextWrapper "" nil) "test" 0))))))))
   (deftest convert-bignumbers-by-column-test
     (testing "convert-bignumbers-by-column should convert BigDecimal and BigInteger values to doubles/longs"
@@ -125,6 +126,9 @@
                 too-big-dec (.scaleByPowerOfTen (BigDecimal. "1") 400)] ; beyond Double range
             (is (= [[nil] [42]] (convert-fn [[too-big-int] [(BigInteger. "42")]])))
             (is (= [[nil] [1.5]] (convert-fn [[too-big-dec] [(BigDecimal. "1.5")]])))))))))
+=======
+            (is (nil? (js.color/get-background-color color-selector (formatter/->TextWrapper "" nil) "test" 0)))))))))
+>>>>>>> v0.62.3
 
 (deftest bigdecimal-cell-gets-range-color-test
   (testing "get-background-color applies range colors to BigDecimal cell values (GDGT-2412)"

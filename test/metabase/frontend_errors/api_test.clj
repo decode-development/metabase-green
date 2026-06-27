@@ -33,16 +33,34 @@
     (mt/with-prometheus-system! [_ system]
       (let [initial (mt/metric-value system :metabase-frontend/errors {:type "component-crash"})]
         (is (nil? (mt/user-http-request :rasta :post 204 "frontend-errors" {:type "component-crash"})))
+<<<<<<< HEAD
         (is (< initial (mt/metric-value system :metabase-frontend/errors {:type "component-crash"}))))))
+=======
+        (is (< initial (mt/metric-value system :metabase-frontend/errors {:type "component-crash"})))))))
+
+(deftest post-frontend-errors-test-2
+>>>>>>> v0.62.3
   (testing "POST /api/frontend-errors with type=chart-render-error tracks separately"
     (mt/with-prometheus-system! [_ system]
       (let [initial (mt/metric-value system :metabase-frontend/errors {:type "chart-render-error"})]
         (mt/user-http-request :rasta :post 204 "frontend-errors" {:type "chart-render-error"})
+<<<<<<< HEAD
         (is (< initial (mt/metric-value system :metabase-frontend/errors {:type "chart-render-error"}))))))
   (testing "POST /api/frontend-errors rejects unknown type values"
     (is (= {:errors {:type "enum of component-crash, chart-render-error"}}
            (select-keys (mt/user-http-request :rasta :post 400 "frontend-errors" {:type "bogus"})
                         [:errors]))))
+=======
+        (is (< initial (mt/metric-value system :metabase-frontend/errors {:type "chart-render-error"})))))))
+
+(deftest post-frontend-errors-test-3
+  (testing "POST /api/frontend-errors rejects unknown type values"
+    (is (= {:errors {:type "enum of component-crash, chart-render-error"}}
+           (select-keys (mt/user-http-request :rasta :post 400 "frontend-errors" {:type "bogus"})
+                        [:errors])))))
+
+(deftest post-frontend-errors-test-4
+>>>>>>> v0.62.3
   (testing "POST /api/frontend-errors is throttled for the same IP once the threshold is exceeded"
     (mt/with-prometheus-system! [_ system]
       (with-throttled-frontend-errors
@@ -57,7 +75,14 @@
                 count-after-throttling    (mt/metric-value system :metabase-frontend/errors {:type "component-crash"})]
             (is (< initial-count count-after-first-request))
             (is (= count-after-first-request count-after-throttling))
+<<<<<<< HEAD
             (is (=? throttled-response resp))))))
+=======
+            (is (=? throttled-response resp))))))))
+
+(deftest post-frontend-errors-test-5
+  (testing "POST /api/frontend-errors is throttled for the same IP once the threshold is exceeded"
+>>>>>>> v0.62.3
     (testing "POST /api/frontend-errors throttles requests from the same IP even if the browser ID changes"
       (mt/with-prometheus-system! [_ system]
         (with-throttled-frontend-errors
@@ -71,7 +96,14 @@
                                                                              {:type "component-crash"})
                   count-after-throttling   (mt/metric-value system :metabase-frontend/errors {:type "component-crash"})]
               (is (= (inc initial-count) count-after-throttling))
+<<<<<<< HEAD
               (is (=? throttled-response resp)))))))
+=======
+              (is (=? throttled-response resp)))))))))
+
+(deftest post-frontend-errors-test-6
+  (testing "POST /api/frontend-errors is throttled for the same IP once the threshold is exceeded"
+>>>>>>> v0.62.3
     (testing "POST /api/frontend-errors throttles repeated requests from the same IP even without a browser cookie"
       (mt/with-prometheus-system! [_ system]
         (with-throttled-frontend-errors
@@ -84,7 +116,14 @@
                                                                             {:type "component-crash"})
                   count-after-throttling (mt/metric-value system :metabase-frontend/errors {:type "component-crash"})]
               (is (= (inc initial-count) count-after-throttling))
+<<<<<<< HEAD
               (is (=? throttled-response resp)))))))
+=======
+              (is (=? throttled-response resp)))))))))
+
+(deftest post-frontend-errors-test-7
+  (testing "POST /api/frontend-errors is throttled for the same IP once the threshold is exceeded"
+>>>>>>> v0.62.3
     (testing "POST /api/frontend-errors throttles repeated invalid payloads before validation"
       (with-throttled-frontend-errors
         (let [request-options (request-options "device-a")]

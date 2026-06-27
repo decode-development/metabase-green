@@ -14,7 +14,9 @@
    [metabase.driver.sql-jdbc :as sql-jdbc]
    [metabase.driver.util :as driver.u]
    [metabase.models.interface :as mi]
+   [metabase.premium-features.core :as premium-features]
    [metabase.query-processor.pipeline :as qp.pipeline]
+   [metabase.tracing.core :as tracing]
    [metabase.transforms-base.util :as transforms-base.u]
    [metabase.transforms.canceling :as canceling]
    [metabase.transforms.feature-gating :as transforms.gating]
@@ -33,8 +35,8 @@
   "Checking whether we have proper feature flags for using a given transform."
   [transform]
   (cond
-    (transforms-base.u/query-transform? transform) (transforms.gating/query-transforms-enabled?)
-    (transforms-base.u/python-transform? transform) (transforms.gating/python-transforms-enabled?)
+    (transforms-base.u/query-transform? transform) (premium-features/query-transforms-enabled?)
+    (transforms-base.u/python-transform? transform) (premium-features/python-transforms-enabled?)
     :else false))
 
 (defn enabled-source-types-for-user
@@ -46,27 +48,46 @@
 (defn source-tables-readable?
   "Check if the source tables/database in a transform are readable by the current user.
   Returns true if the user can query all source tables (for python transforms) or the
-  source database (for query transforms)."
-  [transform]
-  (let [source (:source transform)]
-    (case (keyword (:type source))
-      :query
-      (if-let [db-id (get-in source [:query :database])]
-        (boolean (mi/can-query? (t2/select-one :model/Database db-id)))
-        false)
+  source database (for query transforms). Returns false if the referenced source database
+  no longer exists."
+  ([transform] (source-tables-readable? transform nil))
+  ([transform models-cache]
+   (let [resolve* (fn [model id]
+                    (if models-cache
+                      (get-in models-cache [model id])
+                      (t2/select-one model id)))
+         source   (:source transform)]
+     (case (keyword (:type source))
+       :query
+       (if-let [db-id (get-in source [:query :database])]
+         (if-let [db (resolve* :model/Database db-id)]
+           (boolean (mi/can-query? db))
+           false)
+         false)
 
-      :python
-      (let [source-tables (:source-tables source)]
-        (if (empty? source-tables)
-          true
-          (let [table-ids (into [] (keep :table_id) source-tables)]
-            (and (seq table-ids)
-                 (every? (fn [table-id]
-                           (when-let [table (t2/select-one :model/Table table-id)]
-                             (mi/can-query? table)))
-                         table-ids)))))
+       :python
+       (let [source-tables (:source-tables source)]
+         (if (empty? source-tables)
+           true
+           (let [table-ids (into [] (keep :table_id) source-tables)]
+             (and (seq table-ids)
+                  (every? (fn [table-id]
+                            (when-let [table (resolve* :model/Table table-id)]
+                              (mi/can-query? table)))
+                          table-ids)))))
 
-      (throw (ex-info (str "Unknown transform source type: " (:type source)) {})))))
+       (throw (ex-info (str "Unknown transform source type: " (:type source)) {}))))))
+
+(defn prefetch-source-models
+  "Bulk-load the source databases and tables referenced by `transforms` into a
+  `{:model/Database {id db} :model/Table {id table}}` map"
+  [transforms]
+  (let [db-ids    (into #{} (keep #(get-in % [:source :query :database])) transforms)
+        table-ids (into #{} (mapcat #(keep :table_id (get-in % [:source :source-tables]))) transforms)]
+    {:model/Database (when (seq db-ids)
+                       (u/index-by :id (t2/select :model/Database :id [:in db-ids])))
+     :model/Table    (when (seq table-ids)
+                       (u/index-by :id (t2/select :model/Table :id [:in table-ids])))}))
 
 (defn add-source-readable
   "Add :source_readable field to a transform or collection of transforms.
@@ -116,12 +137,20 @@
   [run-id transform driver {:keys [db-id conn-spec output-schema]} run-transform! & {:keys [ex-message-fn] :or {ex-message-fn ex-message}}]
   ;; local run is responsible for status, using canceling lifecycle
   (try
-    (when-not (driver/schema-exists? driver db-id output-schema)
+    (when (and (not (str/blank? output-schema))
+               (not (driver/schema-exists? driver db-id output-schema)))
       (driver/create-schema-if-needed! driver conn-spec output-schema))
     (let [source-range-params  (transforms-base.u/get-source-range-params transform)
           transform-timeout    (transforms.settings/transform-timeout)
           transform-timeout-ms (u/minutes->ms transform-timeout)]
       (transforms-base.u/save-run-checkpoint-range! run-id source-range-params)
+<<<<<<< HEAD
+=======
+      ;; Enrich the active task.transform.* span with checkpoint range attrs for
+      ;; incremental runs. No-op when tracing is disabled or no span is active.
+      (when source-range-params
+        (tracing/add-span-attrs! :tasks (transforms-base.u/checkpoint-span-attrs source-range-params)))
+>>>>>>> v0.62.3
       (canceling/chan-start-timeout-vthread! run-id transform-timeout)
       (let [cancel-chan (a/promise-chan)
             ret (driver.conn/with-transform-connection
@@ -150,5 +179,5 @@
   "Return true when `table` matches the transform temporary table naming pattern and transforms are enabled."
   [table]
   (boolean
-   (when-let [table-name (and (transforms.gating/any-transforms-enabled?) (:name table))]
+   (when-let [table-name (and (premium-features/any-transforms-enabled?) (:name table))]
      (str/starts-with? (u/lower-case-en table-name) driver.u/transform-temp-table-prefix))))

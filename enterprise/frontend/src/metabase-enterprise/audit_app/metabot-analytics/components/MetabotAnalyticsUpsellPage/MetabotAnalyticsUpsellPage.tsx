@@ -1,11 +1,18 @@
 import { t } from "ttag";
 
+<<<<<<< HEAD
+=======
+import { MetabotAdminLayout } from "metabase/admin/ai/MetabotAdminLayout";
+>>>>>>> v0.62.3
 import { DottedBackground } from "metabase/common/components/upsells/components/DottedBackground";
 import { LineDecorator } from "metabase/common/components/upsells/components/LineDecorator";
 import { useUpgradeAction } from "metabase/common/components/upsells/components/UpgradeModal";
 import { UpsellCardContent } from "metabase/common/components/upsells/components/UpsellCardContent";
 import { UPGRADE_URL } from "metabase/common/components/upsells/constants";
+<<<<<<< HEAD
 import { MetabotAdminLayout } from "metabase/metabot/components/MetabotAdmin/MetabotAdminLayout";
+=======
+>>>>>>> v0.62.3
 import { Stack } from "metabase/ui";
 
 export function MetabotAnalyticsUpsellPage() {

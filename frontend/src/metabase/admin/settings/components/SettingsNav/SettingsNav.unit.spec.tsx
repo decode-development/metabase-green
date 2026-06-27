@@ -12,6 +12,7 @@ import type { TokenFeatures } from "metabase-types/api";
 import {
   createMockSettings,
   createMockTokenFeatures,
+  createMockUser,
   createMockVersionInfo,
 } from "metabase-types/api/mocks";
 
@@ -20,17 +21,31 @@ import { SettingsNav } from "./SettingsNav";
 const setup = async ({
   initialRoute,
   isHosted,
+<<<<<<< HEAD
+=======
+  customVizDevModeEnabled,
+>>>>>>> v0.62.3
   tokenFeatures,
 }: {
   initialRoute: string;
   isHosted?: boolean;
+<<<<<<< HEAD
+=======
+  customVizDevModeEnabled?: boolean;
+>>>>>>> v0.62.3
   tokenFeatures?: Partial<TokenFeatures>;
 }) => {
   const versionInfo = createMockVersionInfo();
   const settings = createMockSettings({
     "version-info": versionInfo,
+    "custom-viz-plugin-dev-mode-enabled": Boolean(customVizDevModeEnabled),
     "token-features": createMockTokenFeatures({
       hosting: Boolean(isHosted),
+<<<<<<< HEAD
+=======
+      "custom-viz": true,
+      "custom-viz-available": true,
+>>>>>>> v0.62.3
       ...tokenFeatures,
     }),
   });
@@ -44,6 +59,7 @@ const setup = async ({
     withRouter: true,
     initialRoute,
     storeInitialState: {
+      currentUser: createMockUser({ is_superuser: true }),
       routing: createMockRoutingState({
         locationBeforeTransitions: createMockLocation({
           pathname: initialRoute,
@@ -63,16 +79,30 @@ describe("SettingsNav", () => {
   });
 
   it("should show Remote sync upsell nav item for non-pro plans", async () => {
+<<<<<<< HEAD
     await setup({ initialRoute: "/admin/settings/general" });
+=======
+    await setup({
+      initialRoute: "/admin/settings/general",
+      tokenFeatures: {
+        "custom-viz": false,
+        "custom-viz-available": false,
+      },
+    });
+>>>>>>> v0.62.3
 
     expect(await screen.findByText("Remote sync")).toBeInTheDocument();
   });
 
   it("should hide Remote sync upsell nav item for pro plans", async () => {
+<<<<<<< HEAD
     await setup({
       initialRoute: "/admin/settings/general",
       tokenFeatures: { advanced_permissions: true },
     });
+=======
+    await setup({ initialRoute: "/admin/settings/general" });
+>>>>>>> v0.62.3
 
     expect(screen.queryByText("Remote sync")).not.toBeInTheDocument();
   });
@@ -141,5 +171,34 @@ describe("SettingsNav", () => {
   it("should only show Updates nav item when hosted", async () => {
     await setup({ initialRoute: "/admin/settings/general", isHosted: true });
     expect(screen.queryByText("Updates")).not.toBeInTheDocument();
+  });
+
+  it("should show Development nav item when custom viz dev mode is enabled", async () => {
+    await setup({
+      initialRoute: "/admin/settings/custom-visualizations",
+      customVizDevModeEnabled: true,
+    });
+
+    const customVizNavItem = await screen.findByRole("link", {
+      name: /Custom visualizations/,
+    });
+    await userEvent.click(customVizNavItem);
+
+    expect(screen.getByText("Development")).toBeInTheDocument();
+  });
+
+  it("should hide Development nav item when custom viz dev mode is disabled", async () => {
+    await setup({
+      initialRoute: "/admin/settings/custom-visualizations",
+      customVizDevModeEnabled: false,
+    });
+
+    const customVizNavItem = await screen.findByRole("link", {
+      name: /Custom visualizations/,
+    });
+    await userEvent.click(customVizNavItem);
+
+    expect(screen.queryByText("Manage visualizations")).not.toBeInTheDocument();
+    expect(screen.queryByText("Development")).not.toBeInTheDocument();
   });
 });

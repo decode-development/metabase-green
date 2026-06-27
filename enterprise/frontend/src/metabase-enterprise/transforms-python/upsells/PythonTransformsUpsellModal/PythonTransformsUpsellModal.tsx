@@ -6,6 +6,7 @@ import { trackUpsellViewed } from "metabase/common/components/upsells/components
 import { useStoreUrl } from "metabase/common/hooks";
 import { useSelector } from "metabase/redux";
 import { getStoreUsers } from "metabase/selectors/store-users";
+import { getUserIsAdmin } from "metabase/selectors/user";
 import { getIsHosted } from "metabase/setup/selectors";
 import {
   Button,
@@ -45,6 +46,8 @@ export function PythonTransformsUpsell({
 
   const isHosted = useSelector(getIsHosted);
   const { isStoreUser, anyStoreUserEmailAddress } = useSelector(getStoreUsers);
+  const isAdmin = useSelector(getUserIsAdmin);
+  const canPurchaseTransforms = isStoreUser || isAdmin;
 
   const { isLoading, error, advancedTransformsAddOn, hadAdvancedTransforms } =
     useTransformsBilling();
@@ -120,14 +123,24 @@ export function PythonTransformsUpsell({
                 </Flex>
               ))}
             </Stack>
+<<<<<<< HEAD
             {!isStoreUser && (
+=======
+            {!canPurchaseTransforms && (
+>>>>>>> v0.62.3
               <Text fw="bold" lh="md">
                 {anyStoreUserEmailAddress
                   ? t`Please ask a Store Admin (${anyStoreUserEmailAddress}) to enable this for you.`
                   : t`Please ask a Store Admin to enable this for you.`}
               </Text>
             )}
+<<<<<<< HEAD
             {isStoreUser && !isHosted && <SelfHostedStorePurchaseLink />}
+=======
+            {canPurchaseTransforms && !isHosted && (
+              <SelfHostedStorePurchaseLink />
+            )}
+>>>>>>> v0.62.3
           </Stack>
         </Flex>
       )}
@@ -140,7 +153,13 @@ export function PythonTransformsUpsellModal({
 }: PythonTransformsUpsellModalProps) {
   const isHosted = useSelector(getIsHosted);
   const { isStoreUser } = useSelector(getStoreUsers);
+<<<<<<< HEAD
   const shouldShowLeftColumn = isStoreUser && isHosted;
+=======
+  const isAdmin = useSelector(getUserIsAdmin);
+  const canPurchaseTransforms = isStoreUser || isAdmin;
+  const shouldShowLeftColumn = canPurchaseTransforms && isHosted;
+>>>>>>> v0.62.3
   const onSuccess = useCallback(() => {
     window.location.href = Urls.transformList(); // On success, do a full-page redirect to transforms list
   }, []);

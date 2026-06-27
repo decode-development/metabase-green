@@ -5,10 +5,19 @@ import { ExternalLink } from "metabase/common/components/ExternalLink";
 import { useStoreUrl } from "metabase/common/hooks";
 import { useSelector } from "metabase/redux/hooks";
 import { getStoreUsers } from "metabase/selectors/store-users";
+<<<<<<< HEAD
+=======
+import { getUserIsAdmin } from "metabase/selectors/user";
+>>>>>>> v0.62.3
 import { Button, HoverCard, Text } from "metabase/ui";
 
 export const LockedTransformsHoverCard = ({ children }: PropsWithChildren) => {
   const { isStoreUser, anyStoreUserEmailAddress } = useSelector(getStoreUsers);
+<<<<<<< HEAD
+=======
+  const isAdmin = useSelector(getUserIsAdmin);
+  const canPurchaseTransforms = isStoreUser || isAdmin;
+>>>>>>> v0.62.3
   const storeUrl = useStoreUrl("account/manage/plans");
 
   return (
@@ -26,7 +35,11 @@ export const LockedTransformsHoverCard = ({ children }: PropsWithChildren) => {
         <Text lh="inherit" mt="sm" c="text-secondary">
           {t`To keep using transforms you can end your trial early and start your subscription.`}
         </Text>
+<<<<<<< HEAD
         {!isStoreUser ? (
+=======
+        {!canPurchaseTransforms ? (
+>>>>>>> v0.62.3
           <Text lh="inherit" mt="sm" c="text-secondary" fw="bold">
             {anyStoreUserEmailAddress
               ? t`Please ask a Store Admin (${anyStoreUserEmailAddress}) to enable this for you.`

@@ -10,6 +10,10 @@
    [metabase.driver.bigquery-cloud-sdk.common :as bigquery.common]
    [metabase.driver.bigquery-cloud-sdk.params :as bigquery.params]
    [metabase.driver.bigquery-cloud-sdk.query-processor :as bigquery.qp]
+   ;; Side-effects: registers BigQuery driver multimethods for workspace
+   ;; isolation (`init-workspace-isolation!`, `grant-workspace-read-access!`,
+   ;; `check-isolation-permissions`, `destroy-workspace-isolation!`).
+   [metabase.driver.bigquery-cloud-sdk.workspaces]
    [metabase.driver.common.table-rows-sample :as table-rows-sample]
    [metabase.driver.connection :as driver.conn]
    [metabase.driver.settings :as driver.settings]
@@ -20,7 +24,6 @@
    [metabase.driver.sql.query-processor.like-escape-char-built-in :as-alias like-escape-char-built-in]
    [metabase.driver.sql.util :as sql.u]
    [metabase.driver.sync :as driver.s]
-   [metabase.driver.util :as driver.u]
    [metabase.util :as u]
    [metabase.util.date-2 :as u.date]
    [metabase.util.i18n :refer [tru]]
@@ -32,27 +35,24 @@
   (:import
    (clojure.lang PersistentList)
    (com.google.api.gax.rpc FixedHeaderProvider)
-   (com.google.auth.oauth2 ImpersonatedCredentials ServiceAccountCredentials)
-   (com.google.cloud Identity Role)
+   (com.google.auth.oauth2 ImpersonatedCredentials)
    (com.google.cloud.bigquery
-    Acl Acl$Role Acl$User
     BigQuery
-    BigQuery$DatasetDeleteOption
     BigQuery$DatasetListOption
     BigQuery$DatasetOption
-    BigQuery$IAMOption
     BigQuery$JobOption
     BigQuery$QueryResultsOption
     BigQuery$TableDataListOption
     BigQuery$TableOption
     BigQueryException
-    BigQueryOptions BigQueryOptions$Builder
+    BigQueryOptions
     Dataset
-    DatasetId DatasetInfo
+    DatasetId
     Field
     Field$Mode
     FieldValue
     FieldValueList
+    Job
     JobInfo
     QueryJobConfiguration
     Schema
@@ -61,13 +61,8 @@
     TableId
     TableResult)
    (com.google.cloud.http HttpTransportOptions)
-   (com.google.cloud.iam.admin.v1 IAMClient IAMSettings)
-   (com.google.cloud.resourcemanager.v3 ProjectsClient ProjectsSettings)
    (com.google.common.collect ImmutableMap)
    (com.google.gson JsonParser)
-   (com.google.iam.admin.v1 CreateServiceAccountRequest DeleteServiceAccountRequest ServiceAccount)
-   (com.google.iam.v1 Binding Policy SetIamPolicyRequest GetIamPolicyRequest)
-   (java.io ByteArrayInputStream)
    (java.util Iterator)))
 
 (set! *warn-on-reflection* true)
@@ -95,8 +90,9 @@
         ;; ImpersonatedCredentials automatically refreshes tokens before expiration,
         ;; so the 1-hour lifetime is just the initial token validity period.
         ;; Each query creates a fresh client, and the credentials handle refresh internally.
-        final-creds  (if-let [target-sa (:impersonate-service-account details)]
-                       (do
+        impersonating? (some? (:impersonate-service-account details))
+        final-creds  (if impersonating?
+                       (let [target-sa (:impersonate-service-account details)]
                          (log/debugf "Creating impersonated credentials for service account: %s" target-sa)
                          (ImpersonatedCredentials/create
                           (.createScoped base-creds bigquery-scopes)
@@ -118,6 +114,16 @@
                        (.setCredentials final-creds)
                        (.setHeaderProvider header-provider)
                        (.setTransportOptions transport-options))]
+    ;; `ImpersonatedCredentials` doesn't carry a project id (it derives identity
+    ;; from the impersonation target SA, not from a key file), so the Google SDK
+    ;; would throw "A project ID is required for this service but could not be
+    ;; determined from the builder or the environment" when building the client.
+    ;; Fall back to the base SA's project id, which is what every non-impersonated
+    ;; call site is implicitly relying on through `getOptions.getProjectId`.
+    (when impersonating?
+      (when-let [pid (or (:project-id details)
+                         (.getProjectId base-creds))]
+        (.setProjectId bq-bldr ^String pid)))
     (when-let [host (not-empty (:host details))]
       (.setHost bq-bldr host))
     (.. bq-bldr build getService)))
@@ -136,15 +142,11 @@
 ;;; |                                                      Sync                                                      |
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
-(defn- get-project-id
-  [{:keys [project-id] :as details}]
-  (or project-id (bigquery.common/database-details->credential-project-id details)))
-
 (defn- list-datasets
   "Fetch all datasets given database `details`, applying dataset filters if specified."
   [{:keys [dataset-filters-type dataset-filters-patterns] :as details} & {:keys [logging-schema-exclusions?]}]
   (let [client (database-details->client details)
-        project-id (get-project-id details)
+        project-id (bigquery.common/get-project-id details)
         datasets (.listDatasets client project-id (u/varargs BigQuery$DatasetListOption))
         inclusion-patterns (when (= "inclusion" dataset-filters-type) dataset-filters-patterns)
         exclusion-patterns (when (= "exclusion" dataset-filters-type) dataset-filters-patterns)]
@@ -201,7 +203,7 @@
   (when-not (or (str/blank? dataset-id) (str/blank? table-id))
     (let [details    (driver.conn/effective-details database)
           client     (database-details->client details)
-          project-id (get-project-id details)]
+          project-id (bigquery.common/get-project-id details)]
       (boolean
        (get-table* client project-id dataset-id table-id)))))
 
@@ -228,7 +230,7 @@
 (defn- describe-database-tables
   [driver database]
   (let [details       (driver.conn/effective-details database)
-        project-id    (get-project-id details)
+        project-id    (bigquery.common/get-project-id details)
         query-dataset (fn [dataset-id]
                         (query-honeysql
                          driver
@@ -367,37 +369,31 @@
   See https://cloud.google.com/bigquery/docs/querying-partitioned-tables#query_an_ingestion-time_partitioned_table"
   "_PARTITIONDATE")
 
-(defn- get-nested-columns-for-tables
-  "Returns nested columns for a specific set of tables"
-  [driver database project-id dataset-id table-names]
-  (let [results (try (query-honeysql
-                      driver
-                      database
-                      {:select [:table_name :column_name :data_type :field_path]
-                       :from [[(information-schema-table project-id dataset-id "COLUMN_FIELD_PATHS") :c]]
-                       :where [:and
-                               [:in :table_name table-names]
-                               ;; we're only interested in nested fields
-                               [:> [:strpos :field_path "."] 0]]})
-                     (catch Throwable e
-                       (log/warnf e "error in get-nested-columns-for-tables for dataset: %s" dataset-id)))
-        nested-column-info (fn [{data-type :data_type field-path-str :field_path table-name :table_name}]
-                             (let [field-path (str/split field-path-str #"\.")
-                                   [database-type base-type] (raw-type->database+base-type data-type)]
-                               (when-let [nfc-path (not-empty (pop field-path))]
-                                 {:name (peek field-path)
-                                  :table-name table-name
-                                  :table-schema dataset-id
-                                  :database-type database-type
-                                  :base-type base-type
-                                  :nfc-path nfc-path})))]
-    (transduce
-     (keep nested-column-info)
-     (completing
-      (fn [accum col]
-        (update-in accum [(:table-name col) (:nfc-path col)] (fnil conj []) col)))
-     {}
-     results)))
+(defn- column-field-path-row->nested-col
+  "Map a `COLUMN_FIELD_PATHS` row to a nested-column map (later keyed by its `:nfc-path`), or `nil` for a top-level
+  (non-nested) field."
+  [dataset-id {data-type :data_type field-path-str :field_path table-name :table_name}]
+  (let [field-path                (str/split field-path-str #"\.")
+        [database-type base-type] (raw-type->database+base-type data-type)]
+    (when-let [nfc-path (not-empty (pop field-path))]
+      {:name          (peek field-path)
+       :table-name    table-name
+       :table-schema  dataset-id
+       :database-type database-type
+       :base-type     base-type
+       :nfc-path      nfc-path})))
+
+(defn- nested-rows->table-lookup
+  "Build a single table's nested-column lookup `{nfc-path [cols]}` from that table's `COLUMN_FIELD_PATHS` rows.
+  Returns `{}` when the table has no nested fields (`table-nested-rows` is empty/`nil`)."
+  [dataset-id table-nested-rows]
+  (transduce
+   (keep #(column-field-path-row->nested-col dataset-id %))
+   (completing
+    (fn [accum col]
+      (update accum (:nfc-path col) (fnil conj []) col)))
+   {}
+   table-nested-rows))
 
 (defn- maybe-add-nested-fields [nested-column-lookup col nfc-path root-database-position]
   (let [new-path (conj (or nfc-path []) (:name col))
@@ -441,24 +437,50 @@
      table-rows)))
 
 (defn- describe-dataset-fields-reducible
+  "Reducibly describe the fields (including nested STRUCT fields) of `table-names` within `dataset-id`.
+
+  Streams two `INFORMATION_SCHEMA` queries -- `COLUMNS` and `COLUMN_FIELD_PATHS` -- both ordered by `table_name`, and
+  merge-joins them by `table_name`, so we only ever hold ONE table's columns and nested-field paths in memory at a
+  time. Realizing the whole batch's nested-field lookup instead OOMs for wide, deeply-nested datasets (e.g.
+  GA4/Firebase exports: hundreds of daily `events_*` tables, each with hundreds of nested STRUCT leaves). Both queries
+  are single-pass live results, so the returned reducible is single-consumption."
   [driver database project-id dataset-id table-names]
   (assert (seq table-names))
-  (let [named-rows-query {:select [:table_name :column_name :data_type :ordinal_position
-                                   [[:= :is_partitioning_column "YES"] :partitioned]]
-                          :from [[(information-schema-table project-id dataset-id "COLUMNS") :c]]
-                          :where [:in :table_name table-names]
-                          :order-by [:table_name]}
-        named-rows (try (query-honeysql driver database named-rows-query)
-                        (catch Throwable e
-                          (log/warnf e "error in describe-fields for dataset: %s" dataset-id)))
-        nested-column-lookup (get-nested-columns-for-tables driver database project-id dataset-id table-names)]
+  (let [columns-reducible (try (query-honeysql driver database
+                                               {:select   [:table_name :column_name :data_type :ordinal_position
+                                                           [[:= :is_partitioning_column "YES"] :partitioned]]
+                                                :from     [[(information-schema-table project-id dataset-id "COLUMNS") :c]]
+                                                :where    [:in :table_name table-names]
+                                                :order-by [:table_name]})
+                               (catch Throwable e
+                                 (log/warnf e "error in describe-fields for dataset: %s" dataset-id)))
+        nested-reducible  (try (query-honeysql driver database
+                                               {:select   [:table_name :column_name :data_type :field_path]
+                                                :from     [[(information-schema-table project-id dataset-id "COLUMN_FIELD_PATHS") :c]]
+                                                :where    [:and
+                                                           [:in :table_name table-names]
+                                                           ;; we're only interested in nested fields
+                                                           [:> [:strpos :field_path "."] 0]]
+                                                :order-by [:table_name]})
+                               (catch Throwable e
+                                 (log/warnf e "error in get-nested-columns-for-tables for dataset: %s" dataset-id)))
+        ;; Lazy per-table groups of `COLUMN_FIELD_PATHS` rows, ordered by `table_name`. We advance through them in
+        ;; lockstep with the per-table `COLUMNS` groups below, keeping only the current table's group realized.
+        group-table       (fn [group] (:table_name (first group)))
+        nested-groups     (volatile! (partition-by :table_name nested-reducible))
+        lookup-for-table  (fn [table-name]
+                            (let [remaining  (drop-while #(neg? (compare (group-table %) table-name)) @nested-groups)
+                                  this-table (when (= table-name (group-table (first remaining)))
+                                               (first remaining))]
+                              (vreset! nested-groups (cond-> remaining this-table next))
+                              (nested-rows->table-lookup dataset-id this-table)))]
     (eduction
      (partition-by :table_name)
      (mapcat (fn [table-rows]
                (let [table-name (:table_name (first table-rows))]
-                 (->> (describe-dataset-rows (get nested-column-lookup table-name) dataset-id table-name table-rows)
+                 (->> (describe-dataset-rows (lookup-for-table table-name) dataset-id table-name table-rows)
                       (sort-by (juxt :table-name :database-position :name))))))
-     named-rows)))
+     columns-reducible)))
 
 ;; we redef this in a test, don't make `^:const`!
 (def ^:private num-table-partitions
@@ -479,7 +501,7 @@
 (defmethod driver/describe-fields :bigquery-cloud-sdk
   [driver database & {:keys [schema-names table-names]}]
   (let [details     (driver.conn/effective-details database)
-        project-id  (get-project-id details)
+        project-id  (bigquery.common/get-project-id details)
         dataset-ids (or schema-names (list-datasets details))]
     ;; The contract of [[driver/describe-fields]] requires results ordered by:
     ;; `table-schema`, `table-name`, `database-position`
@@ -532,10 +554,95 @@
 
 (declare reducible-bigquery-results)
 
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; |                                        Sizing sample pages by measurement                                      |
+;;; +----------------------------------------------------------------------------------------------------------------+
+;;; `tabledata.list` returns whole rows (it can't project columns in this SDK), and the parsed page is held in memory
+;;; while we fingerprint it. A wide table, or a narrow one with heavy columns (large text, BYTES, JSON, or nested
+;;; RECORD/REPEATED) can make a page huge and OOM sync. Rather than guess a per-row cost from column types (which is
+;;; wildly inaccurate -- a TEXT column may hold 5 bytes or 5 MB), we *measure* it: fetch a small probe page, then
+;;; recompute the next page size from the average bytes/row actually seen, so each page targets a fixed byte budget.
+
+(def ^:private ^:dynamic *page-byte-budget*
+  "Target measured bytes per result page, for both `tabledata.list` sampling and regular query execution. The next
+  page size is `budget / measured-bytes-per-row`, clamped to [1, remaining]. Kept well under the server's ~10 MB page
+  cap to leave headroom for JVM object expansion when the page is parsed."
+  (* 4 1024 1024))
+
+(def ^:private sample-probe-rows
+  "Rows to request for the first (probe) page, before we've measured the table's real row size. Small enough to stay
+  within the budget even for heavy rows, but not 1 -- a handful averages out per-row size variance."
+  10)
+
+(def ^:private sample-cell-overhead-bytes
+  "Approximate JVM footprint of a single parsed cell beyond its character data (the `FieldValue` wrapper plus boxing).
+  Added per cell so the budget tracks in-memory size, not just the wire bytes."
+  64)
+
+(defn- field-value-bytes
+  "Measured (not type-estimated) in-memory size of one parsed cell. `tabledata.list` returns scalars as Strings, so
+  the character count is a faithful proxy; REPEATED/RECORD values (a `FieldValueList`/`List` of cells) are summed
+  recursively."
+  ^long [^FieldValue cell]
+  (let [v (.getValue cell)]
+    (cond
+      (instance? java.util.List v) (reduce (fn [^long acc c] (+ acc (field-value-bytes c)))
+                                           sample-cell-overhead-bytes
+                                           v)
+      (string? v)                  (+ sample-cell-overhead-bytes (.length ^String v))
+      :else                        sample-cell-overhead-bytes)))
+
+(defn- row-bytes
+  "Measured in-memory size of one fetched row."
+  ^long [^FieldValueList row]
+  (reduce (fn [^long acc cell] (+ acc (field-value-bytes cell))) 0 row))
+
+(defn- next-page-size
+  "Rows to request for the next page given the average measured bytes/row so far, targeting `budget` bytes/page.
+  Clamped to [1, `remaining`]. Shared by the sampler ([[adaptive-sample-next-page]]) and regular query execution
+  ([[adaptive-query-next-page]])."
+  ^long [^long budget ^long measured-bytes ^long measured-rows ^long remaining]
+  (let [avg-row-bytes (max 1 (quot measured-bytes (max 1 measured-rows)))]
+    (-> (quot budget avg-row-bytes)
+        (max 1)
+        (min remaining))))
+
+(defn- list-sample-page
+  "Issue a `tabledata.list` request for at most `page-size` rows, continuing from `page-token` when given."
+  ^TableResult [^Table bq-table page-size ^String page-token]
+  (let [opts (cond-> [(BigQuery$TableDataListOption/pageSize (long page-size))]
+               (not (str/blank? page-token)) (conj (BigQuery$TableDataListOption/pageToken page-token)))]
+    (.list bq-table (u/varargs BigQuery$TableDataListOption opts))))
+
+(defn- adaptive-sample-next-page
+  "A swappable page-advance for [[reducible-bigquery-results]], used when sampling. It measures the just-consumed
+  page's real bytes/row and re-issues `.list` from the page token with a size targeting `*page-byte-budget*`
+  -- a sliding window that adapts per page to the table's actual data instead of guessing from column types. Returns
+  nil once the `max-rows` budget is spent or there are no more pages."
+  [^Table bq-table ^long max-rows]
+  (let [budget (long *page-byte-budget*)
+        seen   (atom {:bytes 0, :rows 0})]
+    (fn [^TableResult page]
+      (let [token (.getNextPageToken page)]
+        (when-not (str/blank? token)
+          (let [[page-bytes page-rows] (reduce (fn [[b n] row] [(+ (long b) (row-bytes row)) (inc (long n))])
+                                               [0 0]
+                                               (.getValues page))
+                {:keys [bytes rows]}   (swap! seen (fn [s] {:bytes (+ (long (:bytes s)) (long page-bytes))
+                                                            :rows  (+ (long (:rows s)) (long page-rows))}))
+                remaining              (- max-rows (long rows))]
+            (when (pos? remaining)
+              (*page-callback*)
+              (list-sample-page bq-table (next-page-size budget bytes rows remaining) token))))))))
+
 (defn- sample-table
   "Process a sample of rows of fields corresponding to the Metabase fields
   `fields` from the BigQuery table `bq-table` using the query result reducing
   function `rff`.
+
+  We fetch a small probe page first and then let [[reducible-bigquery-results]] walk the rest, but with an adaptive
+  page-advance ([[adaptive-sample-next-page]]) that re-sizes each page from the *measured* bytes/row so heavy tables
+  fetch fewer rows -- without column-type guesses, and reusing the existing cancel/dedup/nil-page handling.
 
   `.getSchema` returns nil if called on the result of `.list`, so we have to
   match fields by position. Here it is assumed that :database_position in
@@ -543,10 +650,11 @@
   that `.list` returns the fields in that order. The first assumption could be
   lifted by matching the names in `fields` to the names in the table schema."
   [^Table bq-table fields rff]
-  (let [field-idxs  (mapv :database_position fields)
-        all-parsers (get-field-parsers (.. bq-table getDefinition getSchema))
-        parsers     (mapv all-parsers field-idxs)
-        page        (.list bq-table (u/varargs BigQuery$TableDataListOption))]
+  (let [^Schema schema (.. bq-table getDefinition getSchema)
+        field-idxs     (mapv :database_position fields)
+        all-parsers    (get-field-parsers schema)
+        parsers        (mapv all-parsers field-idxs)
+        probe          (list-sample-page bq-table (min (long sample-probe-rows) table-rows-sample/max-sample-rows) nil)]
     (transduce
      (comp (take table-rows-sample/max-sample-rows)
            (map (partial extract-fingerprint field-idxs parsers)))
@@ -554,7 +662,8 @@
      ;; metadata from the schema, but that probably makes no
      ;; difference and currently the metadata is ignored anyway.
      (rff {:cols fields})
-     (reducible-bigquery-results page nil (constantly nil)))))
+     (reducible-bigquery-results probe nil (constantly nil)
+                                 (adaptive-sample-next-page bq-table table-rows-sample/max-sample-rows)))))
 
 (defn- ingestion-time-partitioned-table?
   [table-id]
@@ -655,57 +764,83 @@
      ;; realizing more rows as per the maximum result size
      (.setMaxResults *page-size*))))
 
+(defn- adaptive-query-next-page
+  "Adaptive page-advance for query-job results (the regular execution path), mirroring [[adaptive-sample-next-page]]
+  but paging via `getQueryResults` -- the query result's own `.getNextPage` re-uses the original page size and can't
+  be re-sized. Measures the just-consumed page's real bytes/row and re-issues the next page with a `pageSize`
+  targeting [[*page-byte-budget*]], so a wide or heavy result fetches fewer rows per page instead of holding a
+  large parsed page in memory. Returns nil once the result set is exhausted."
+  [^BigQuery client job-id]
+  (let [budget (long *page-byte-budget*)
+        seen   (atom {:bytes 0, :rows 0})]
+    (fn [^TableResult page]
+      (let [token (.getNextPageToken page)]
+        (when-not (str/blank? token)
+          (let [[page-bytes page-rows] (reduce (fn [[b n] row] [(+ (long b) (row-bytes row)) (inc (long n))])
+                                               [0 0]
+                                               (.getValues page))
+                {:keys [bytes rows]}   (swap! seen (fn [s] {:bytes (+ (long (:bytes s)) (long page-bytes))
+                                                            :rows  (+ (long (:rows s)) (long page-rows))}))]
+            (log/trace "BigQuery: Fetching new page")
+            (*page-callback*)
+            (.getQueryResults client job-id
+                              (u/varargs BigQuery$QueryResultsOption
+                                [(BigQuery$QueryResultsOption/pageSize
+                                  (next-page-size budget bytes rows Long/MAX_VALUE))
+                                 (BigQuery$QueryResultsOption/pageToken token)]))))))))
+
 (defn- reducible-bigquery-results
-  [^TableResult page cancel-chan attempt-job-cancel-fn]
-  (reify
-    clojure.lang.IReduceInit
-    (reduce [_ rf init]
-      ;; TODO: Once we're confident that the memory/thread leaks in BigQuery are resolved, we can remove some of this
-      ;; logging, and certainly remove the `n` counter.
-      ;; NOTE: Page can be nil in various situations, some are understood (early cancel) and some are not. (#47339)
-      (try
-        (loop [^TableResult page page
-               it                (some-> page values-iterator)
-               acc               init
-               n                 0]
-          (cond
-            ;; Early exit. This happens in middleware/limit `(take max)`
-            (reduced? acc)
-            (do (log/tracef "BigQuery: Early exit from reducer after %d rows" n)
-                (attempt-job-cancel-fn)
-                (unreduced acc))
+  "Reducible over the rows of `page` and its successors. `next-page` is the adaptive page-advance: given the
+  just-exhausted page it measures it and returns the next one (re-sized from the measured bytes/row to a byte budget),
+  or nil when done. Adaptive page sizing is the only mode -- callers pass [[adaptive-sample-next-page]] (sampling, via
+  `.list`) or [[adaptive-query-next-page]] (query execution, via `getQueryResults`)."
+  ([^TableResult page cancel-chan attempt-job-cancel-fn next-page]
+   (reify
+     clojure.lang.IReduceInit
+     (reduce [_ rf init]
+       ;; TODO: Once we're confident that the memory/thread leaks in BigQuery are resolved, we can remove some of this
+       ;; logging, and certainly remove the `n` counter.
+       ;; NOTE: Page can be nil in various situations, some are understood (early cancel) and some are not. (#47339)
+       (try
+         (loop [^TableResult page page
+                it                (some-> page values-iterator)
+                acc               init
+                n                 0]
+           (cond
+             ;; Early exit. This happens in middleware/limit `(take max)`
+             (reduced? acc)
+             (do (log/tracef "BigQuery: Early exit from reducer after %d rows" n)
+                 (attempt-job-cancel-fn)
+                 (unreduced acc))
 
-            ;; While middleware is processing rows, check for browser initiated cancel.
-            (some-> cancel-chan a/poll!)
-            (throw (ex-info (tru "Query cancelled") {:page n}))
+             ;; While middleware is processing rows, check for browser initiated cancel.
+             (some-> cancel-chan a/poll!)
+             (throw (ex-info (tru "Query cancelled") {:page n}))
 
-            ;; Clear to send: if there's more in `it`, then send it and recur.
-            (some-> it .hasNext)
-            (let [acc' (try
-                         (rf acc (.next it))
-                         (catch Throwable e
-                           (log/errorf e "error in reducible-bigquery-results! %d rows" n)
-                           (throw e)))]
-              (recur page it acc' (inc n)))
+             ;; Clear to send: if there's more in `it`, then send it and recur.
+             (some-> it .hasNext)
+             (let [acc' (try
+                          (rf acc (.next it))
+                          (catch Throwable e
+                            (log/errorf e "error in reducible-bigquery-results! %d rows" n)
+                            (throw e)))]
+               (recur page it acc' (inc n)))
 
-            ;; This page is exhausted - check for another page and keep processing.
-            (some-> page .hasNextPage)
-            (let [_        (log/tracef "BigQuery: Fetching new page after %d rows" n)
-                  _        (*page-callback*)
-                  new-page (.getNextPage page)]
-              (if-let [new-iter (some-> new-page values-iterator)]
-                (do
-                  (log/trace "BigQuery: New page returned")
-                  (recur new-page new-iter acc (inc n)))
-                (throw (ex-info "Cannot get next page from BigQuery" {:page n}))))
-
-            ;; All pages exhausted, so just return.
-            :else
-            (do (log/tracef "BigQuery: All rows consumed (%d)" n)
-                acc)))
-        (catch Throwable t
-          (attempt-job-cancel-fn)
-          (throw t))))))
+             ;; This page is exhausted - ask `next-page` for another and keep processing.
+             ;; `some->` keeps the old nil-page tolerance (#47339): a nil page yields no next page and falls through
+             ;; to the `acc` branch (empty result) instead of NPEing inside `next-page`.
+             :else
+             (if-let [new-page (some-> page next-page)]
+               (if-let [new-iter (some-> new-page values-iterator)]
+                 (do
+                   (log/trace "BigQuery: New page returned")
+                   (recur new-page new-iter acc (inc n)))
+                 (throw (ex-info "Cannot get next page from BigQuery" {:page n})))
+               (do (log/tracef "BigQuery: All rows consumed (%d)" n)
+                   acc))))
+         (catch Throwable t
+           (attempt-job-cancel-fn)
+           (throw t)))))))
 
 (defn- bigquery-execute-response
   "Given the initial query page, respond with metadata and a lazy reducible that will page through the rest of the data."
@@ -725,7 +860,8 @@
         cols {:cols columns}
         results (eduction (map (fn [^FieldValueList row]
                                  (mapv parse-field-value row parsers)))
-                          (reducible-bigquery-results page cancel-chan attempt-job-cancel-fn))]
+                          (reducible-bigquery-results page cancel-chan attempt-job-cancel-fn
+                                                      (adaptive-query-next-page client job-id)))]
     (respond cols results)))
 
 (defn- execute-bigquery
@@ -738,7 +874,12 @@
         result-promise   (promise)
         request          (build-bigquery-request sql parameters)
         _                (driver.conn/track-connection-acquisition! database-details)
-        job              (.create client (JobInfo/of request) (u/varargs BigQuery$JobOption))
+        ;; Wrap exception to avoid responding with HTTP 500 and reporting "We're experiencing server issues"
+        ;; in the UI. (#71558)
+        ^Job job         (try
+                           (.create client (JobInfo/of request) (u/varargs BigQuery$JobOption))
+                           (catch Throwable t
+                             (handle-bigquery-exception t sql parameters)))
         job-id           (.getJobId job)
         query-future     (future
                            ;; ensure the classloader is available within the future.
@@ -841,8 +982,23 @@
                               :transforms/python                true
                               :transforms/table                 true
                               ;; Workspace isolation using service account impersonation
-                              :workspace                        false}]
+                              :workspace                        true}]
   (defmethod driver/database-supports? [:bigquery-cloud-sdk feature] [_driver _feature _db] supported?))
+
+(defmethod driver/qualified-name-components :bigquery-cloud-sdk
+  [_driver]
+  ;; BigQuery emits three-part identifiers in compiled SQL: `project.dataset.table`.
+  ;; Project is connection-level identity but it appears in the AST as `Table.catalog`,
+  ;; so we model it as `:db`. Dataset sits at SQLGlot's `Table.db` position, our `:schema`.
+  [:db :schema])
+
+(defmethod driver.sql/table-qualification-style :bigquery-cloud-sdk
+  [_driver]
+  :table-qualification-style/db-schema-table)
+
+(defmethod driver.sql/db-slot-value :bigquery-cloud-sdk
+  [_driver database]
+  (:project-id (:details database)))
 
 ;; BigQuery is always in UTC
 (defmethod driver/db-default-timezone :bigquery-cloud-sdk [_ _]
@@ -890,10 +1046,10 @@
 
 ;; TODO: THIS METHOD SHOULD NOT BE UPDATING THE APP-DB (which it does in [convert-dataset-id-to-filters!])
 ;; Issue: https://github.com/metabase/metabase/issues/39392
-;; NOTE: This normalize is a legacy migration (OAuth -> service-account, dataset-id -> filters).
-;; write-data-details is a new feature and will never contain these legacy fields, so we only
-;; normalize the primary details here. The convert-dataset-id-to-filters! function has DB write
-;; side effects that are specific to the primary details.
+;; This normalize is a legacy migration (OAuth -> service-account, dataset-id -> filters); it
+;; runs only against `:details` because the overlay maps (`:write-data-details`, `:admin-details`)
+;; never carry these legacy fields, and `convert-dataset-id-to-filters!` writes side effects
+;; specific to the primary details.
 (defmethod driver/normalize-db-details :bigquery-cloud-sdk
   [_driver database]
   (let [details (driver.conn/default-details database)]
@@ -1071,7 +1227,7 @@
   ;; This is important for workspace isolation where the impersonated SA has
   ;; access to an existing isolated dataset but cannot create new datasets.
   (let [client     (database-details->client conn-spec) ;; for bigquery, connection spec *is* the details
-        project-id (get-project-id conn-spec)
+        project-id (bigquery.common/get-project-id conn-spec)
         dataset-id (DatasetId/of project-id schema)]
     (when-not (.getDataset client dataset-id (u/varargs BigQuery$DatasetOption))
       ;; Dataset doesn't exist, try to create it
@@ -1102,6 +1258,7 @@
 ;;; - Roles: `roles/bigquery.admin`, `roles/iam.serviceAccountAdmin`, `roles/resourcemanager.projectIamAdmin`
 ;;; - APIs: `bigquery.googleapis.com`, `iam.googleapis.com`, `cloudresourcemanager.googleapis.com`
 
+<<<<<<< HEAD
 (defn- ws-service-account-credentials
   "Parse ServiceAccountCredentials from database details."
   ^ServiceAccountCredentials [{:keys [service-account-json]}]
@@ -1491,5 +1648,7 @@
       (finally
         (.close iam-client)))))
 
+=======
+>>>>>>> v0.62.3
 (defmethod driver/llm-sql-dialect-resource :bigquery-cloud-sdk [_]
   "metabot/prompts/dialects/bigquery.md")

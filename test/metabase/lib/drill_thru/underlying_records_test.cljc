@@ -785,6 +785,54 @@
                (map #(:long-display-name (lib/display-info query' %))
                     (lib/filters query'))))))))
 
+<<<<<<< HEAD
+=======
+(deftest ^:parallel underlying-records-month-breakout-with-tz-offset-test
+  (testing "drilling on a `month`-bucketed cell whose value carries a non-UTC offset filters the right month (#71147)"
+    ;; The bug: a pivot cell for February stamped as Berlin local time ("2024-02-01T00:00:00+01:00") was
+    ;; being shifted to UTC (2024-01-31T23:00Z) before truncation, so the resulting filter spanned January.
+    (doseq [[unit value start end]
+            [[:month   "2024-02-01T00:00:00+01:00" "2024-02-01" "2024-02-29"]
+             [:quarter "2024-04-01T00:00:00+02:00" "2024-04-01" "2024-06-30"]
+             [:year    "2024-01-01T00:00:00+02:00" "2024-01-01" "2024-12-31"]]]
+      (testing (str unit " bucket, value " value)
+        (let [query     (-> (lib/query meta/metadata-provider (meta/table-metadata :orders))
+                            (lib/aggregate (lib/count))
+                            (lib/breakout (-> (meta/field-metadata :orders :created-at)
+                                              (lib/with-temporal-bucket unit)))
+                            (lib/breakout (meta/field-metadata :orders :product-id)))
+              cols      (lib/returned-columns query)
+              created   (lib.tu.notebook/find-col-with-spec
+                         query cols {} {:display-name (str "Created At: "
+                                                           (case unit
+                                                             :month   "Month"
+                                                             :quarter "Quarter"
+                                                             :year    "Year"))})
+              product   (lib.tu.notebook/find-col-with-spec
+                         query cols {} {:display-name "Product ID"})
+              count-col (lib.tu.notebook/find-col-with-spec
+                         query cols {} {:display-name "Count"})
+              context   {:column     count-col
+                         :column-ref (lib/ref count-col)
+                         :value      77
+                         :row        [{:column created,   :column-ref (lib/ref created),   :value value}
+                                      {:column product,   :column-ref (lib/ref product),   :value 14}
+                                      {:column count-col, :column-ref (lib/ref count-col), :value 77}]
+                         :dimensions [{:column created,   :column-ref (lib/ref created),   :value value}
+                                      {:column product,   :column-ref (lib/ref product),   :value 14}]}
+              drill     (m/find-first #(= (:type %) :drill-thru/underlying-records)
+                                      (lib/available-drill-thrus query context))]
+          (is (some? drill))
+          (is (=? {:stages [{:filters [[:between {}
+                                        [:field {:temporal-unit unit} (meta/id :orders :created-at)]
+                                        start
+                                        end]
+                                       [:= {}
+                                        [:field {} (meta/id :orders :product-id)]
+                                        14]]}]}
+                  (lib/drill-thru query drill))))))))
+
+>>>>>>> v0.62.3
 (deftest ^:parallel double-summarize-then-drill-twice-test
   (testing "drilling twice on a double-summarize query keeps the correct date filter (#72937)"
     (let [;; First summarize: max(subtotal) by day(created-at), product-id.
@@ -874,3 +922,60 @@
                              :breakout    (symbol "nil #_\"key is not present.\"")
                              :fields      (symbol "nil #_\"key is not present.\"")}]}
                   second-result)))))))
+<<<<<<< HEAD
+=======
+
+(deftest ^:parallel partial-dimensions-fill-from-row-test
+  (testing "underlying-records drill fills in missing breakout-sourced row entries when the
+            FE provides only some of the dimensions (#73803)"
+    ;; Models a card where stage 1 has agg+breakouts (count by created-at:month, state); stage 2
+    ;; adds a filter `state = "AK"`. On the FE the scatter only puts CREATED_AT in graph.dimensions,
+    ;; so the click context's :dimensions has just CREATED_AT — STATE is present in :row but, at
+    ;; the last stage, its column metadata shows :source/previous-stage / :source :fields rather
+    ;; than a breakout. The drill must still apply STATE = clicked-value to the underlying records.
+    (let [base       (-> (lib/query meta/metadata-provider (meta/table-metadata :people))
+                         (lib/aggregate (lib/count))
+                         (lib/breakout (-> (meta/field-metadata :people :created-at)
+                                           (lib/with-temporal-bucket :month)))
+                         (lib/breakout (meta/field-metadata :people :state))
+                         lib/append-stage)
+          base-cols  (lib/returned-columns base)
+          created-at (lib.tu.notebook/find-col-with-spec
+                      base base-cols {} {:display-name "Created At: Month"})
+          state-col  (lib.tu.notebook/find-col-with-spec
+                      base base-cols {} {:display-name "State"})
+          count-col  (lib.tu.notebook/find-col-with-spec
+                      base base-cols {} {:display-name "Count"})
+          query      (lib/filter base (lib/= state-col "AK"))
+          context    {:column     count-col
+                      :column-ref (lib/ref count-col)
+                      :value      4
+                      :row        [{:column     created-at
+                                    :column-ref (lib/ref created-at)
+                                    :value      "2026-07-01T00:00:00Z"}
+                                   {:column     state-col
+                                    :column-ref (lib/ref state-col)
+                                    :value      "AK"}
+                                   {:column     count-col
+                                    :column-ref (lib/ref count-col)
+                                    :value      4}]
+                      :dimensions [{:column     created-at
+                                    :column-ref (lib/ref created-at)
+                                    :value      "2026-07-01T00:00:00Z"}]}
+          drill      (m/find-first #(= (:type %) :drill-thru/underlying-records)
+                                   (lib/available-drill-thrus query context))
+          _          (is (some? drill))
+          result     (lib/drill-thru query drill)]
+      (is (=? {:stages [{:source-table (meta/id :people)
+                         :filters      [[:between {}
+                                         [:field {:temporal-unit :month} (meta/id :people :created-at)]
+                                         string?
+                                         string?]
+                                        [:= {}
+                                         [:field {} (meta/id :people :state)]
+                                         "AK"]]
+                         :aggregation  (symbol "nil #_\"key is not present.\"")
+                         :breakout     (symbol "nil #_\"key is not present.\"")
+                         :fields       (symbol "nil #_\"key is not present.\"")}]}
+              result)))))
+>>>>>>> v0.62.3
