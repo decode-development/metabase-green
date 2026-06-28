@@ -38,6 +38,7 @@
   (or (discovery-response)
       {:status 404 :body {:error "not_found"}}))
 
+<<<<<<< HEAD
 ;; One endpoint per MCP path (canonical and legacy), kept in sync with [[metabase.mcp.api/endpoint-paths]].
 ;; Each advertises its own path as `:resource`, so a strict RFC 9728 client connecting via the legacy
 ;; alias still sees a resource value matching the URL it hit.
@@ -53,6 +54,22 @@
 (defn- protected-resource-metadata
   "OAuth Protected Resource Metadata (RFC 9728) advertising `resource-path` as the protected resource."
   [resource-path]
+||||||| 0a60f2436f
+(api.macros/defendpoint :get "/oauth-protected-resource/api/mcp"
+  :- [:map
+      [:status [:= 200]]
+      [:body [:map
+              [:resource :string]
+              [:authorization_servers [:sequential :string]]
+              [:scopes_supported [:sequential :string]]
+              [:bearer_methods_supported [:sequential :string]]]]]
+  "Returns OAuth Protected Resource Metadata (RFC 9728) for the MCP endpoint."
+  []
+=======
+(defn- protected-resource-response
+  "Build the OAuth Protected Resource Metadata (RFC 9728) response for the MCP endpoint."
+  []
+>>>>>>> v0.62.1
   (let [site-url (system/site-url)]
     {:status  200
      :headers {"Content-Type" "application/json"}
@@ -60,6 +77,7 @@
                :authorization_servers     [site-url]
                :scopes_supported          (vec (oauth-server/all-agent-scopes))
                :bearer_methods_supported  ["header"]}}))
+<<<<<<< HEAD
 
 (api.macros/defendpoint :get "/oauth-protected-resource/api/metabase-mcp"
   :- resource-metadata-response-schema
@@ -81,3 +99,29 @@
   "Returns OAuth Protected Resource Metadata (RFC 9728) for the MCP endpoint."
   []
   (protected-resource-metadata "/api/metabase-mcp"))
+||||||| 0a60f2436f
+=======
+
+(def ^:private protected-resource-schema
+  [:map
+   [:status [:= 200]]
+   [:body [:map
+           [:resource :string]
+           [:authorization_servers [:sequential :string]]
+           [:scopes_supported [:sequential :string]]
+           [:bearer_methods_supported [:sequential :string]]]]])
+
+(api.macros/defendpoint :get "/oauth-protected-resource/api/mcp"
+  :- protected-resource-schema
+  "Returns OAuth Protected Resource Metadata (RFC 9728) for the MCP endpoint."
+  []
+  (protected-resource-response))
+
+;; Some clients probe the bare resource path instead of the resource-specific one; serve the same metadata here so
+;; the request doesn't fall through to the SPA's HTML catch-all and trip a `JSON.parse` error (BOT-1617).
+(api.macros/defendpoint :get "/oauth-protected-resource"
+  :- protected-resource-schema
+  "Returns OAuth Protected Resource Metadata (RFC 9728) for the MCP endpoint."
+  []
+  (protected-resource-response))
+>>>>>>> v0.62.1

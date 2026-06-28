@@ -31,6 +31,7 @@
                         [:name :string]]]]
    [:rows [:sequential [:sequential :any]]]])
 
+<<<<<<< HEAD
 (defn- ->js-number
   "Coerce BigDecimal/BigInteger to primitive double/long so Graal's JS context sees them as numbers, not host objects.
    Returns nil when the value would overflow — BigInteger too wide for long, or BigDecimal magnitude beyond Double's
@@ -46,6 +47,84 @@
       (.longValue ^BigInteger v))
 
     :else v))
+||||||| 0a60f2436f
+(defn- convert-bignumbers-by-column
+  "Convert BigDecimal and BigInteger values to doubles/longs since Graal doesn't handle these"
+  [data]
+  (if (empty? data)
+    []
+    (let [first-row (first data)
+          bignum-column-indices (->> (map-indexed
+                                      (fn [idx item]
+                                        (when (or (instance? BigDecimal item)
+                                                  (instance? BigInteger item))
+                                          idx))
+                                      first-row)
+                                     (filter some?)
+                                     (into #{}))]
+      (if (empty? bignum-column-indices)
+        data
+        (mapv
+         (fn [row]
+           (vec
+            (map-indexed
+             (fn [idx item]
+               (if (bignum-column-indices idx)
+                 (cond
+                   (instance? BigDecimal item)
+                   (.doubleValue ^BigDecimal item)
+
+                   (instance? BigInteger item)
+                   (.longValue ^BigInteger item)
+
+                   :else item)
+                 item))
+             row)))
+         data)))))
+=======
+(defn- ->js-number
+  "Coerce BigDecimal/BigInteger to primitive double/long so Graal's JS context sees them as numbers, not host objects.
+   Returns nil when the value would overflow — BigInteger too wide for long, or BigDecimal magnitude beyond Double's
+   finite range — since silently truncating would feed wrong values into gradient/comparison logic."
+  [v]
+  (cond
+    (instance? BigDecimal v)
+    (let [d (.doubleValue ^BigDecimal v)]
+      (when (Double/isFinite d) d))
+
+    (instance? BigInteger v)
+    (when (<= (.bitLength ^BigInteger v) 63)
+      (.longValue ^BigInteger v))
+
+    :else v))
+
+(defn- convert-bignumbers-by-column
+  "Convert BigDecimal and BigInteger values to doubles/longs since Graal doesn't handle these"
+  [data]
+  (if (empty? data)
+    []
+    (let [first-row (first data)
+          bignum-column-indices (->> (map-indexed
+                                      (fn [idx item]
+                                        (when (or (instance? BigDecimal item)
+                                                  (instance? BigInteger item))
+                                          idx))
+                                      first-row)
+                                     (filter some?)
+                                     (into #{}))]
+      (if (empty? bignum-column-indices)
+        data
+        (mapv
+         (fn [row]
+           (vec
+            (map-indexed
+             (fn [idx item]
+               (if (bignum-column-indices idx)
+                 (->js-number item)
+                 item))
+             row)))
+         data)))))
+>>>>>>> v0.62.1
 
 (mu/defn make-color-selector
   "Returns a curried javascript function (object) that can be used with `get-background-color` for delegating to JS

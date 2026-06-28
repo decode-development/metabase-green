@@ -49,11 +49,22 @@
     (f (f query rff)) -> (f query rff)
 
   All of these middlewares assume MBQL 5."
+<<<<<<< HEAD
   ;; Must be FIRST in this list so it runs INNERMOST (the LAST element of `reduce` ends up running FIRST). It needs
   ;; to execute INSIDE the `binding` blocks established by the EE postprocessing middlewares below. See
   ;; [[metabase.query-processor.middleware.process-userland-query/capture-execution-context-middleware]] for why.
   [#'qp.process-userland-query/capture-execution-context-middleware
    #'qp.middleware.enterprise/swap-destination-db-middleware
+||||||| 0a60f2436f
+  [#'qp.middleware.enterprise/swap-destination-db-middleware
+=======
+  ;; Must be FIRST in this list so it runs INNERMOST (the LAST element of `reduce` ends up running FIRST). It needs
+  ;; to execute INSIDE the `binding` blocks established by the EE postprocessing middlewares below. See
+  ;; [[metabase.query-processor.middleware.process-userland-query/capture-execution-context-middleware]] for why.
+  [#'qp.process-userland-query/capture-execution-context-middleware
+   #'qp.middleware.enterprise/apply-workspace-sql-remapping-middleware
+   #'qp.middleware.enterprise/swap-destination-db-middleware
+>>>>>>> v0.62.1
    #'qp.middleware.enterprise/apply-impersonation-postprocessing-middleware
    #'update-used-cards/update-used-cards!
    #'add-native-form-to-result-metadata

@@ -20,6 +20,7 @@
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
    [metabase.util.malli.schema :as ms]
+   [metabase.workspaces.table-remapping :as ws.table-remapping]
    [toucan2.core :as t2]))
 
 (set! *warn-on-reflection* true)
@@ -400,9 +401,20 @@
    ;; determine what's changed between what info we have and what's in the DB
    (let [driver                (driver.u/database->driver database)
          db-table-metadatas    (table-set db-metadata)
+<<<<<<< HEAD
          ;; drop tables whose names can't be stored in the app DB before they reach an INSERT and abort creation of
          ;; the remaining new tables for this database
          db-table-metadatas    (remove-tables-with-too-long-names database db-table-metadatas)
+||||||| 0a60f2436f
+=======
+         ;; DEV-1898: workspace-isolated tables (`ws_*`) live on the warehouse but must not
+         ;; become :model/Table rows. They back canonical Tables via remap, not their own identity.
+         db-table-metadatas    (ws.table-remapping/filter-workspace-side-tables db-table-metadatas (:id database))
+         ;; Inject synthetic canonical-side tuples for any remap whose to-side is materialized.
+         ;; Without this, the diff retires canonical Table rows whose physical backing only
+         ;; exists at the workspace location (not at the canonical name on the warehouse).
+         db-table-metadatas    (ws.table-remapping/inject-workspace-canonical-tuples db-table-metadatas (:id database))
+>>>>>>> v0.62.1
          name+schema           #(select-keys % [:name :schema])
          name+schema->db-table (m/index-by name+schema db-table-metadatas)
          our-metadata          (db->our-metadata database)

@@ -30,7 +30,12 @@
    [metabase.lib.schema.common :as lib.schema.common]
    [metabase.lib.schema.metadata :as lib.schema.metadata]
    [metabase.lib.util :as lib.util]
+<<<<<<< HEAD
    [metabase.types.core]
+||||||| 0a60f2436f
+   [metabase.lib.util.match :as lib.util.match]
+=======
+>>>>>>> v0.62.1
    [metabase.util :as u]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]

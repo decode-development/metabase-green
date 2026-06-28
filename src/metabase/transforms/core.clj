@@ -14,13 +14,24 @@
    [metabase.transforms.models.transform-tag]
    [metabase.transforms.schedule]
    [metabase.transforms.settings]
+   [metabase.transforms.usage]
    [metabase.transforms.util]
    [potemkin :as p]))
 
 (p/import-vars
  [metabase.transforms.settings
+<<<<<<< HEAD
   transform-timeout
   transforms-meter-locked]
+||||||| 0a60f2436f
+  transform-timeout]
+=======
+  transform-timeout
+  transforms-meter-locked]
+ [metabase.transforms.usage
+  transform-locked?
+  transforms-meter-locked?]
+>>>>>>> v0.62.1
  [metabase.transforms-base.util
   native-query-transform?
   output-table

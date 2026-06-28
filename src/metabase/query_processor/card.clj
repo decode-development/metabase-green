@@ -32,8 +32,19 @@
    [metabase.util.i18n :refer [tru]]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
+<<<<<<< HEAD
    [metabase.util.match :as match]
    [metabase.util.performance :refer [mapv select-keys not-empty]]))
+||||||| 0a60f2436f
+   [metabase.util.performance :refer [mapv select-keys not-empty]]
+   ^{:clj-kondo/ignore [:discouraged-namespace]}
+   [toucan2.core :as t2]))
+=======
+   [metabase.util.match :as match]
+   [metabase.util.performance :refer [mapv select-keys not-empty]]
+   ^{:clj-kondo/ignore [:discouraged-namespace]}
+   [toucan2.core :as t2]))
+>>>>>>> v0.62.1
 
 (set! *warn-on-reflection* true)
 

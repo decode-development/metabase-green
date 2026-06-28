@@ -67,6 +67,7 @@
   [:map
    ;; despite this being called "query string" it can actually be any value because it just gets used in an `:=`
    ;; filter clause. :eyeroll:
+<<<<<<< HEAD
    [:query-string {:optional true} :any]
    ;; when present, the matching column is added as a second breakout so that each row becomes a
    ;; [value label] pair used for remapping
@@ -88,13 +89,46 @@
                                         (lib/all-referenced-entity-ids [value-source-query]
                                                                        {:include-implicitly-joinable? true}))
       value-source-query)))
+||||||| 0a60f2436f
+   [:query-string {:optional true} :any]])
+=======
+   [:query-string {:optional true} :any]
+   ;; when present, the matching column is added as a second breakout so that each row becomes a
+   ;; [value label] pair used for remapping
+   [:label-field {:optional true} [:maybe [:or :mbql.clause/field :mbql.clause/expression]]]
+   ;; when present, restrict the values to an exact match on the value column (used to fetch the
+   ;; remapped label for a single selected value)
+   [:exact-value {:optional true} :any]])
+>>>>>>> v0.62.1
 
 (mu/defn- values-from-card-query :- [:maybe ::lib.schema/query]
+<<<<<<< HEAD
   [query     :- [:maybe ::lib.schema/query]
    field-ref :- [:or :mbql.clause/field :mbql.clause/expression]
    {:keys [query-string label-field exact-value] :as _opts} :- [:maybe ::values-from-card-query.options]]
   (when query
     (let [card-id (lib/primary-source-card-id query)]
+||||||| 0a60f2436f
+  [{query :dataset_query, :keys [id], :as _card} :- [:and
+                                                     :metabase.queries.schema/card
+                                                     [:map
+                                                      [:id ::lib.schema.id/card]]]
+   field-ref                        :- [:or :mbql.clause/field :mbql.clause/expression]
+   {:keys [query-string] :as _opts} :- [:maybe ::values-from-card-query.options]]
+  (when (seq query)
+    ;; start a new query using this Card as a starting point
+    (let [query (lib/query query (lib.metadata/card query id))]
+=======
+  [{query :dataset_query, :keys [id], :as _card} :- [:and
+                                                     :metabase.queries.schema/card
+                                                     [:map
+                                                      [:id ::lib.schema.id/card]]]
+   field-ref                                    :- [:or :mbql.clause/field :mbql.clause/expression]
+   {:keys [query-string label-field exact-value] :as _opts} :- [:maybe ::values-from-card-query.options]]
+  (when (seq query)
+    ;; start a new query using this Card as a starting point
+    (let [query (lib/query query (lib.metadata/card query id))]
+>>>>>>> v0.62.1
       (when-let [visible-columns (or (not-empty (lib/visible-columns query))
                                      (log/warnf "Cannot get values from Card %d: Card query has no visible columns"
                                                 card-id))]
@@ -103,6 +137,7 @@
                                                card-id
                                                (pr-str field-ref)
                                                (pr-str (map (some-fn :lib/source-column-alias :name) visible-columns))))]
+<<<<<<< HEAD
           (let [label-column    (when label-field
                                   (or (lib/find-matching-column query -1 label-field visible-columns)
                                       (log/warnf "Cannot get labels from Card %d: failed to find column for ref %s"
@@ -117,11 +152,35 @@
                                   query-string        (if search-textual?
                                                         (lib/ignore-case (lib/contains search-column query-string))
                                                         (lib/= search-column query-string)))]
+||||||| 0a60f2436f
+          (let [textual?     (lib.types.isa/string? value-column)
+                nonempty     ((if textual? lib/not-empty lib/not-null) value-column)
+                query-filter (when query-string
+                               (if textual?
+                                 (lib/contains (lib/lower value-column) (u/lower-case-en query-string))
+                                 (lib/= value-column query-string)))]
+=======
+          (let [label-column   (when label-field
+                                 (or (lib/find-matching-column query -1 label-field visible-columns)
+                                     (log/warnf "Cannot get labels from Card %d: failed to find column for ref %s"
+                                                id
+                                                (pr-str label-field))))
+                search-column   (or label-column value-column)
+                value-textual?  (lib.types.isa/string? value-column)
+                search-textual? (lib.types.isa/string? search-column)
+                nonempty        ((if value-textual? lib/not-empty lib/not-null) value-column)
+                query-filter    (cond
+                                  (some? exact-value) (lib/= value-column exact-value)
+                                  query-string        (if search-textual?
+                                                        (lib/ignore-case (lib/contains search-column query-string))
+                                                        (lib/= search-column query-string)))]
+>>>>>>> v0.62.1
             (-> query
                 (lib/limit *max-rows*)
                 (lib/filter nonempty)
                 (cond-> query-filter (lib/filter query-filter))
                 (lib/breakout value-column)
+<<<<<<< HEAD
                 ;; add the label as a second breakout so each row is a [value label] pair
                 (cond-> label-column (lib/breakout label-column)))))))))
 
@@ -150,6 +209,27 @@
      ;; If the row_count returned = the limit we specified, then it's probably has more than that.
      ;; If the query has its own limit smaller than *max-rows*, then there's no more values.
      :has_more_values (= (:row_count result) *max-rows*)}))
+||||||| 0a60f2436f
+                ;; TODO(Braden, 07/04/2025): This should probably become a lib helper? I suspect this isn't the only
+                ;; "internal" query in the BE.
+                (assoc-in [:middleware :disable-remaps?] true))))))))
+=======
+                ;; add the label as a second breakout so each row is a [value label] pair
+                (cond-> label-column (lib/breakout label-column)))))))))
+
+(defn- result->rows
+  "Extract rows from a QP result, dropping values for any display columns the QP injected for
+  remapped breakouts. Those columns are referenced by a `:remapped_to` entry on their source
+  column; when none are present the raw rows are returned as-is."
+  [result]
+  (let [cols       (get-in result [:data :cols])
+        rows       (get-in result [:data :rows])
+        drop-names (into #{} (keep :remapped_to) cols)]
+    (if (empty? drop-names)
+      rows
+      (let [keep-idxs (into [] (keep-indexed (fn [i c] (when-not (drop-names (:name c)) i))) cols)]
+        (perf/mapv (fn [row] (perf/mapv #(nth row %) keep-idxs)) rows)))))
+>>>>>>> v0.62.1
 
 (mu/defn values-from-card
   "Get distinct values of a field from a card.
@@ -171,7 +251,44 @@
   ([card      :- :metabase.queries.schema/card
     field-ref :- [:or :mbql.clause/field :mbql.clause/expression]
     opts      :- [:maybe ::values-from-card-query.options]]
+<<<<<<< HEAD
    (values-from-card* (card-query (:id card) (not-empty (:dataset_query card))) field-ref opts)))
+||||||| 0a60f2436f
+   (let [mbql-query   (values-from-card-query card field-ref opts)
+         result       (some-> mbql-query qp/process-query)
+         values       (get-in result [:data :rows])]
+     {:values         (or values [])
+      ;; If the row_count returned = the limit we specified, then it's probably has more than that.
+      ;; If the query has its own limit smaller than *max-rows*, then there's no more values.
+      :has_more_values (= (:row_count result) *max-rows*)})))
+
+(mu/defn card-values
+  "Given a param and query returns the values."
+  [{config :values_source_config :as _param} :- ::parameters.schema/parameter
+   query-string                              :- [:maybe ms/NonBlankString]]
+  (let [card-id (:card_id config)
+        card    (t2/select-one :model/Card :id card-id)]
+    (values-from-card card (lib/->mbql5 (:value_field config)) {:query-string query-string})))
+=======
+   (let [mbql-query (values-from-card-query card field-ref opts)
+         result     (some-> mbql-query qp/process-query)
+         values     (some-> result result->rows)]
+     {:values          (or values [])
+      ;; If the row_count returned = the limit we specified, then it's probably has more than that.
+      ;; If the query has its own limit smaller than *max-rows*, then there's no more values.
+      :has_more_values (= (:row_count result) *max-rows*)})))
+
+(mu/defn card-values
+  "Given a param and query returns the values."
+  [{config :values_source_config :as _param} :- ::parameters.schema/parameter
+   query-string                              :- [:maybe ms/NonBlankString]]
+  (let [card-id (:card_id config)
+        card    (t2/select-one :model/Card :id card-id)]
+    (values-from-card card
+                      (lib/->mbql5 (:value_field config))
+                      (cond-> {:query-string query-string}
+                        (:label_field config) (assoc :label-field (lib/->mbql5 (:label_field config)))))))
+>>>>>>> v0.62.1
 
 (defn- can-get-card-values?
   "Whether the prebuilt value-source `query` exposes the `value-field` column."
@@ -249,6 +366,7 @@
             ;; more than two groups are always ambiguous, so no match
             nil))))))
 
+<<<<<<< HEAD
 (mu/defn- card-remapped-value
   "For a card source configured with a `:label_field`, fetch the [value label] pair for a single
   `value` by querying the card filtered to that exact value. Returns nil when there is no label
@@ -264,6 +382,24 @@
                                                {:exact-value value
                                                 :label-field (lib/->mbql5 label-field)})))))))))
 
+||||||| 0a60f2436f
+=======
+(mu/defn- card-remapped-value
+  "For a card source configured with a `:label_field`, fetch the [value label] pair for a single
+  `value` by querying the card filtered to that exact value. Returns nil when there is no label
+  field, the card is unreadable/archived, or no matching row is found."
+  [{config :values_source_config :as _param} value]
+  (when-let [label-field (:label_field config)]
+    (when-let [card (t2/select-one :model/Card :id (:card_id config))]
+      (when (and (not (:archived card))
+                 (mi/can-read? card)
+                 (can-get-card-values? card (:value_field config)))
+        (first (:values (values-from-card card
+                                          (lib/->mbql5 (:value_field config))
+                                          {:exact-value value
+                                           :label-field (lib/->mbql5 label-field)})))))))
+
+>>>>>>> v0.62.1
 (mu/defn parameter-remapped-value
   "Fetch the remapped value for the given `value` of parameter `param` with default values provided by
   the function `default-case-thunk`.

@@ -141,6 +141,7 @@ export const MetabotChat = ({
               {showIllustrations && (
                 <Box component={EmptyDashboardBot} w="6rem" />
               )}
+<<<<<<< HEAD
               {!isConfigured ? (
                 <AIProviderConfigurationNotice
                   featureName={metabotName}
@@ -152,6 +153,26 @@ export const MetabotChat = ({
                     t`I can help you explore your metrics and models.`}
                 </Text>
               )}
+||||||| 0a60f2436f
+              <Text c="text-tertiary" maw="12rem" ta="center" lh="lg">
+                {config.emptyText ??
+                  t`I can help you explore your metrics and models.`}
+              </Text>
+=======
+              {!isConfigured ? (
+                <AIProviderConfigurationNotice
+                  featureName={metabotName}
+                  onConfigureAi={openAiProviderConfigurationModal}
+                />
+              ) : (
+                <Text c="text-tertiary" maw="12rem" ta="center" lh="lg">
+                  {config.emptyText ??
+                    (showIllustrations
+                      ? t`I can help you explore your metrics and models.`
+                      : t`Explore your metrics and models with AI.`)}
+                </Text>
+              )}
+>>>>>>> v0.62.1
             </Flex>
             {isConfigured && !config.hideSuggestedPrompts && (
               <Stack

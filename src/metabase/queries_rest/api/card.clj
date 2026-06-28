@@ -534,7 +534,19 @@
    [:result_metadata        {:optional true} [:maybe analyze/ResultsMetadata]]
    [:cache_ttl              {:optional true} [:maybe ms/PositiveInt]]
    [:dashboard_id           {:optional true} [:maybe ms/PositiveInt]]
-   [:dashboard_tab_id       {:optional true} [:maybe ms/PositiveInt]]])
+   [:dashboard_tab_id       {:optional true} [:maybe ms/PositiveInt]]
+   [:size                   {:optional true} [:maybe [:map
+                                                      [:size_x ms/PositiveInt]
+                                                      [:size_y ms/PositiveInt]]]]])
+
+(defn- normalize-dataset-query-or-400
+  "Strictly normalize an incoming `:dataset_query` from an API request, converting any normalization
+  failure into a 400 Bad Request."
+  [query]
+  (try
+    (lib-be/normalize-query nil query {:strict? true})
+    (catch Throwable e
+      (throw (ex-info (ex-message e) (assoc (ex-data e) :status-code 400) e)))))
 
 (defn- normalize-dataset-query-or-400
   "Strictly normalize an incoming `:dataset_query` from an API request, converting any normalization

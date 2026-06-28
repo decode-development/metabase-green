@@ -7,8 +7,14 @@
    [metabase.lib.core :as lib]
    [metabase.lib.metadata :as lib.metadata]
    [metabase.metabot.tools.resources :as read-resource]
+<<<<<<< HEAD
    [metabase.metabot.tools.shared.llm-representations :as llm-rep]
    [metabase.models.interface :as mi]
+||||||| 0a60f2436f
+=======
+   [metabase.metabot.tools.shared.llm-shape :as llm-shape]
+   [metabase.models.interface :as mi]
+>>>>>>> v0.62.1
    [metabase.query-processor :as qp]
    [metabase.test :as mt]
    [metabase.transforms.core :as transforms.core]
@@ -53,6 +59,7 @@
                  (#'read-resource/parse-uri "https://example.com"))))
   (testing "rejects empty path"
     (is (thrown? Exception
+<<<<<<< HEAD
                  (#'read-resource/parse-uri "metabase://"))))
   (testing "URL-decodes path segments — schema names containing '/' round-trip"
     ;; An encoded URI like /schemas/weird%2Fname/tables splits into 5 segments,
@@ -64,6 +71,21 @@
             parsed (#'read-resource/parse-uri uri)]
         (is (= "metabase://database/1/schemas/weird%2Fname/tables" uri))
         (is (= ["database" "1" "schemas" "weird/name" "tables"] (:segments parsed)))))))
+||||||| 0a60f2436f
+                 (#'read-resource/parse-uri "metabase://table")))))
+=======
+                 (#'read-resource/parse-uri "metabase://"))))
+  (testing "URL-decodes path segments — schema names containing '/' round-trip"
+    ;; An encoded URI like /schemas/weird%2Fname/tables splits into 5 segments,
+    ;; with the schema segment decoded back to its literal form (containing '/').
+    (let [parsed (#'read-resource/parse-uri "metabase://database/1/schemas/weird%2Fname/tables")]
+      (is (= ["database" "1" "schemas" "weird/name" "tables"] (:segments parsed))))
+    (testing "round-trips through metabase-uri"
+      (let [uri    (llm-shape/metabase-uri :database 1 "schemas" "weird/name" "tables")
+            parsed (#'read-resource/parse-uri uri)]
+        (is (= "metabase://database/1/schemas/weird%2Fname/tables" uri))
+        (is (= ["database" "1" "schemas" "weird/name" "tables"] (:segments parsed)))))))
+>>>>>>> v0.62.1
 
 (deftest read-resource-validation-test
   (testing "rejects too many URIs"
@@ -606,6 +628,7 @@
           formatted (#'read-resource/format-resources resources)]
       (is (str/includes? formatted "**Error:** Table not found")))))
 
+<<<<<<< HEAD
 ;; ===== Behavioral tests for patterns where the dispatch contract isn't enough =====
 
 (deftest read-database-detail-test
@@ -725,6 +748,128 @@
                                 {:uris [(str "metabase://model/" m-id "/sources")]})]
           (is (str/includes? output (str "uri=\"metabase://database/" db-id "\""))))))))
 
+||||||| 0a60f2436f
+=======
+;; ===== Behavioral tests for patterns where the dispatch contract isn't enough =====
+
+(deftest read-database-detail-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Database {db-id :id} {:name "Detail DB" :engine :h2}]
+      (testing "metabase://database/{id} returns single-entity output with engine + uri"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://database/" db-id)]})]
+          (is (str/includes? output "Detail DB"))
+          (is (str/includes? output (str "uri=\"metabase://database/" db-id "\"")))
+          (is (str/includes? output "engine=\"h2\"")))))))
+
+(deftest read-database-models-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Database {db-id :id}    {}
+                   :model/Card     {model-id :id} {:type :model :database_id db-id :name "M-One"}
+                   :model/Card     _              {:type :question :database_id db-id :name "Q-Skip"}]
+      (testing "metabase://database/{id}/models lists models only (not questions)"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://database/" db-id "/models")]})]
+          (is (str/includes? output "M-One"))
+          (is (str/includes? output (str "uri=\"metabase://model/" model-id "\"")))
+          (is (not (str/includes? output "Q-Skip"))))))))
+
+(deftest read-database-schemas-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Database {db-id :id} {}
+                   :model/Table _ {:db_id db-id :schema "PUBLIC"  :name "t1" :active true}
+                   :model/Table _ {:db_id db-id :schema "PRIVATE" :name "t2" :active true}]
+      (testing "metabase://database/{id}/schemas emits a drill-in URI per schema"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://database/" db-id "/schemas")]})]
+          (is (str/includes? output "PUBLIC"))
+          (is (str/includes? output "PRIVATE"))
+          (is (str/includes? output (str "uri=\"metabase://database/" db-id "/schemas/PUBLIC/tables\"")))
+          (is (str/includes? output (str "uri=\"metabase://database/" db-id "/schemas/PRIVATE/tables\""))))))))
+
+(deftest read-database-schema-tables-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Database {db-id :id} {}
+                   :model/Table {pub-id :id} {:db_id db-id :schema "PUBLIC"  :name "PUB-TABLE"  :active true}
+                   :model/Table _            {:db_id db-id :schema "PRIVATE" :name "PRIV-TABLE" :active true}]
+      (testing "metabase://database/{id}/schemas/{name}/tables filters by schema"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://database/" db-id "/schemas/PUBLIC/tables")]})]
+          (is (str/includes? output "PUB-TABLE"))
+          (is (str/includes? output (str "uri=\"metabase://table/" pub-id "\"")))
+          (is (not (str/includes? output "PRIV-TABLE"))))))))
+
+(deftest read-database-schema-tables-with-slash-in-schema-name-test
+  (testing "schema names containing '/' (which Postgres/Snowflake/etc. allow) survive URI round-trip"
+    (mt/with-current-user (mt/user->id :crowberto)
+      (mt/with-temp [:model/Database {db-id :id} {}
+                     :model/Table {weird-id :id} {:db_id db-id :schema "weird/name" :name "WEIRD-TABLE" :active true}
+                     :model/Table _              {:db_id db-id :schema "other"      :name "OTHER-TABLE" :active true}]
+        (let [emitted-uri (llm-shape/metabase-uri :database db-id "schemas" "weird/name" "tables")]
+          (testing "the URI builder emits an encoded segment"
+            (is (str/includes? emitted-uri "weird%2Fname")))
+          (testing "the encoded URI dispatches and filters to the right schema"
+            (let [{:keys [output]} (read-resource/read-resource {:uris [emitted-uri]})]
+              (is (str/includes? output "WEIRD-TABLE"))
+              (is (str/includes? output (str "uri=\"metabase://table/" weird-id "\"")))
+              (is (not (str/includes? output "OTHER-TABLE"))))))))))
+
+(deftest read-collection-detail-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Collection {coll-id :id} {:name "Detail Coll" :location "/"}]
+      (testing "metabase://collection/{id} returns single-entity output with name + uri"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://collection/" coll-id)]})]
+          (is (str/includes? output "Detail Coll"))
+          (is (str/includes? output (str "uri=\"metabase://collection/" coll-id "\""))))))))
+
+(deftest read-collection-subcollections-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Collection {parent-id :id} {:name "Parent" :location "/"}
+                   :model/Collection {child-id :id}  {:name "Child"  :location (str "/" parent-id "/")}]
+      (testing "metabase://collection/{id}/subcollections lists direct children only"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://collection/" parent-id "/subcollections")]})]
+          (is (str/includes? output "Child"))
+          (is (str/includes? output (str "uri=\"metabase://collection/" child-id "\"")))
+          (is (not (str/includes? output "Parent"))))))))
+
+(deftest read-collections-tree-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Collection {parent-id :id} {:name "P" :location "/"}
+                   :model/Collection _              {:name "C" :location (str "/" parent-id "/")}]
+      (testing "metabase://collections?tree=true returns all collections with full path strings"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris ["metabase://collections?tree=true"]})]
+          (is (str/includes? output "<list type=\"collections-tree\""))
+          (is (str/includes? output "P"))
+          ;; child path is rendered as "P/C" (parent name + child name)
+          (is (str/includes? output "P/C")
+              "child collection should carry path=\"P/C\" computed from ancestor names"))))))
+
+(deftest read-table-field-with-slash-test
+  (testing "field IDs containing slashes (e.g. composite ids c75/17) are preserved through dispatch"
+    (let [calls (atom nil)]
+      (with-redefs [read-resource/fetch-table-field
+                    (fn [& args] (reset! calls args) {:structured-output {:result-type :metabot-entity :type :stub}})]
+        (#'read-resource/dispatch "metabase://table/3/fields/c75/17")
+        (is (= ["3" "c75/17"] @calls))))))
+
+(deftest read-card-question-vs-model-test
+  (mt/with-current-user (mt/user->id :crowberto)
+    (mt/with-temp [:model/Database {db-id :id} {}
+                   :model/Card {q-id :id} {:type :question :database_id db-id :name "Q-card"}
+                   :model/Card {m-id :id} {:type :model    :database_id db-id :name "M-card"}]
+      (testing "metabase://question/{id}/sources discriminates from model"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://question/" q-id "/sources")]})]
+          (is (str/includes? output (str "uri=\"metabase://database/" db-id "\"")))))
+      (testing "metabase://model/{id}/sources for a model card"
+        (let [{:keys [output]} (read-resource/read-resource
+                                {:uris [(str "metabase://model/" m-id "/sources")]})]
+          (is (str/includes? output (str "uri=\"metabase://database/" db-id "\""))))))))
+
+>>>>>>> v0.62.1
 (deftest read-question-resource-test
   (let [mp (mt/metadata-provider)
         query (as-> (lib/query mp (lib.metadata/table mp (mt/id :products))) $
@@ -744,8 +889,7 @@
               output (:output read-result)
               structured (get-in read-result [:resources 0 :content :structured-output])]
           (testing "Output references expected fields"
-            (is (re-find #"display_name\S+Count" output))
-            (is (re-find #"display_name\S+Category" output)))
+            (is (re-find #"<name>\S*My fav card" output)))
           (testing "Structured output contains expected fields"
             (is (=? {:fields [{:display_name "Category"}
                               {:display_name "Count"}]}

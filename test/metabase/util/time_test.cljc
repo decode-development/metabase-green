@@ -116,11 +116,29 @@
 
         "2022-01-01T00:00:00" 2022 "year"
         "1954-01-01T00:00:00" 1954 "year"
+<<<<<<< HEAD
         "2044-01-01T00:00:00" 2044 "year")))
+||||||| 0a60f2436f
+        "2044-01-01T00:00:00" 2044 "year")))
+
+=======
+        "2044-01-01T00:00:00" 2044 "year"))))
+
+(deftest ^:parallel string->timestamp-test-2
+>>>>>>> v0.62.1
   (testing "numbers with no unit are parsed as year numbers"
     (are [exp-str input] (same? (from-zulu exp-str) (shared.ut/coerce-to-timestamp input {}))
       "1950-01-01T00:00:00Z" 1950
+<<<<<<< HEAD
       "2015-01-01T00:00:00Z" 2015))
+||||||| 0a60f2436f
+      "2015-01-01T00:00:00Z" 2015))
+
+=======
+      "2015-01-01T00:00:00Z" 2015)))
+
+(deftest string->timestamp-test-3
+>>>>>>> v0.62.1
   (testing "strings"
     (testing "with unit=day-of-week get parsed as eg. Mon"
       (with-redefs [internal/now (fn [] (from test-epoch))]
@@ -141,7 +159,16 @@
           "2022-12-14T17:07:00Z" "2022-12-14T13:37:00-03:30"))
       (testing "and no time offset are assumed to be UTC"
         (is (same? (from-zulu "2022-12-14T13:37:45Z")
+<<<<<<< HEAD
                    (shared.ut/coerce-to-timestamp "2022-12-14T13:37:45" {}))))))
+||||||| 0a60f2436f
+                   (shared.ut/coerce-to-timestamp "2022-12-14T13:37:45" {}))))))
+
+=======
+                   (shared.ut/coerce-to-timestamp "2022-12-14T13:37:45" {})))))))
+
+(deftest ^:parallel string->timestamp-test-4
+>>>>>>> v0.62.1
   (testing "existing date-time values are simply returned"
     (are [value] (let [t (shared.ut/coerce-to-timestamp value)] (same? t (shared.ut/coerce-to-timestamp t)))
       "2022-12-12T00:00:00"

@@ -496,72 +496,118 @@
 (defn- run-async!
   "Executes a remote sync task asynchronously in a virtual thread.
 
-  Takes a task-type string ('import' or 'export'), a branch name to update in settings upon completion, and a
-  sync-fn function that takes a task-id and performs the sync operation. Creates a new task (or errors if one is
-  already running), then executes the sync function in a virtual thread with a timeout.
+  Takes a task-type string ('import' or 'export'), a branch name to update in settings upon completion, a
+  sync-fn function that takes a task-id and performs the sync operation, and an optional :on-success callback
+  that receives [task-id result] after a successful sync. Creates a new task (or errors if one is already
+  running), then executes the sync function in a virtual thread with a timeout.
 
   Returns a RemoteSyncTask. Throws ExceptionInfo with status 400 if a sync task is already in progress."
-  [task-type branch sync-fn]
+  [task-type branch sync-fn & {:keys [on-success]}]
   (let [{task-id :id existing? :existing? :as task} (create-task-with-lock! task-type)]
     (api/check-400 (not existing?) "Remote sync in progress")
     (u.jvm/in-virtual-thread*
      (dh/with-timeout {:interrupt? true
                        :timeout-ms (* (settings/remote-sync-task-time-limit-ms) 10)}
-       (handle-task-result!
-        (try
-          (sync-fn task-id)
-          (catch Exception e
-            (log/error e "Remote sync task failed")
-            {:status :error
-             :message (source-error-message e)}))
-        task-id branch)))
+       (let [result (try
+                      (sync-fn task-id)
+                      (catch Exception e
+                        (log/error e "Remote sync task failed")
+                        {:status :error
+                         :message (source-error-message e)}))]
+         (handle-task-result! result task-id branch)
+         (when (and on-success (= :success (:status result)))
+           (try
+             (on-success task-id result)
+             (catch Exception e
+               (log/error e "Remote sync task :on-success function failed")))))))
     task))
 
 (defn async-import!
   "Imports remote-synced collections from a remote source repository asynchronously.
 
   Takes a branch name to import from, a force? boolean (if true, imports even if there are unsaved changes or conflicts),
-  and an import-args map of additional arguments to pass to the import function. Checks for dirty changes and throws an
+  and an import-args map of additional arguments to pass to the import function. Optionally accepts an :on-success
+  callback that receives [task-id result] after a successful import. Checks for dirty changes and throws an
   exception if force? is false and changes exist.
 
   Returns a RemoteSyncTask. Throws ExceptionInfo with status 400 and :conflicts true if there
   are unsaved changes and force? is false."
+<<<<<<< HEAD
   [branch force? import-args]
   (guards/ensure-no-active-task!)
   (let [pre-task-branch (settings/remote-sync-branch)
         source          (source/source-from-settings branch)
         has-dirty?      (remote-sync.object/dirty?)]
+||||||| 0a60f2436f
+  [branch force? import-args]
+  (let [source (source/source-from-settings branch)
+        has-dirty? (remote-sync.object/dirty?)]
+=======
+  [branch force? import-args & {:keys [on-success]}]
+  (guards/ensure-no-active-task!)
+  (let [pre-task-branch (settings/remote-sync-branch)
+        source          (source/source-from-settings branch)
+        has-dirty?      (remote-sync.object/dirty?)]
+>>>>>>> v0.62.1
     (when (and has-dirty? (not force?))
       (throw (ex-info "There are unsaved changes in the Remote Sync collection which will be overwritten by the import. Force the import to discard these changes."
                       {:status-code 400
                        :conflicts true})))
+<<<<<<< HEAD
     (run-async! "import" branch
                 (fn [task-id]
                   (import! (source.p/snapshot source) task-id
                            (assoc import-args
                                   :force?           force?
                                   :pre-task-branch  pre-task-branch))))))
+||||||| 0a60f2436f
+    (run-async! "import" branch (fn [task-id] (import! (source.p/snapshot source) task-id (assoc import-args :force? force?))))))
+=======
+    (run-async! "import" branch
+                (fn [task-id]
+                  (import! (source.p/snapshot source) task-id
+                           (assoc import-args
+                                  :force?           force?
+                                  :pre-task-branch  pre-task-branch)))
+                :on-success on-success)))
+>>>>>>> v0.62.1
 
 (defn async-export!
   "Exports the remote-synced collections to the remote source repository asynchronously.
 
   Takes a branch name to export to, a force? boolean (if true, exports even if there are new changes in the remote
-  branch), and a commit message string. Checks if the remote branch has changed since the last sync and throws an
+  branch), and a commit message string. Optionally accepts an :on-success callback that receives [task-id result]
+  after a successful export. Checks if the remote branch has changed since the last sync and throws an
   exception if force? is false and changes exist.
 
   Returns a RemoteSyncTask. Throws ExceptionInfo with status 400 and :conflicts true if there
   are new remote changes and force? is false."
+<<<<<<< HEAD
   [branch force? message]
   (guards/ensure-no-active-task!)
   (let [pre-task-branch        (settings/remote-sync-branch)
         source                 (source/source-from-settings branch)
         last-task-version      (remote-sync.task/last-version)
         snapshot               (source.p/snapshot source)
+||||||| 0a60f2436f
+  [branch force? message]
+  (let [source (source/source-from-settings branch)
+        last-task-version (remote-sync.task/last-version)
+        snapshot (source.p/snapshot source)
+=======
+  [branch force? message & {:keys [on-success]}]
+  (guards/ensure-no-active-task!)
+  (let [pre-task-branch        (settings/remote-sync-branch)
+        source                 (source/source-from-settings branch)
+        last-task-version      (remote-sync.task/last-version)
+        snapshot               (source.p/snapshot source)
+>>>>>>> v0.62.1
         current-source-version (source.p/version snapshot)]
     (when (and (not force?) (some? last-task-version) (not= last-task-version current-source-version))
       (throw (ex-info "Cannot export changes that will overwrite new changes in the branch."
                       {:status-code 400
                        :conflicts true})))
+<<<<<<< HEAD
     (run-async! "export" branch
                 (fn [task-id]
                   (export! snapshot task-id message :pre-task-branch pre-task-branch)))))
@@ -584,6 +630,34 @@
   (let [source (source/source-from-settings)]
     (source.p/create-branch source new-branch (settings/remote-sync-branch))
     (async-export! new-branch false message)))
+||||||| 0a60f2436f
+    (run-async! "export" branch (fn [task-id] (export! snapshot task-id message)))))
+=======
+    (run-async! "export" branch
+                (fn [task-id]
+                  (export! snapshot task-id message
+                           :pre-task-branch pre-task-branch))
+                :on-success on-success)))
+
+(defn create-branch!
+  "Creates a new remote branch from `base-branch` and switches `remote-sync-branch`
+   to the new name. Does not publish events or return a response map; the caller
+   is responsible for those concerns."
+  [name base-branch]
+  (guards/ensure-no-active-task!)
+  (let [source (source/source-from-settings)]
+    (source.p/create-branch source name base-branch)
+    (settings/remote-sync-branch! name)))
+
+(defn stash!
+  "Creates a new remote branch from the current `remote-sync-branch` and starts an
+   async export to it. Returns the resulting RemoteSyncTask. Does not publish events."
+  [new-branch message & {:keys [on-success]}]
+  (guards/ensure-no-active-task!)
+  (let [source (source/source-from-settings)]
+    (source.p/create-branch source new-branch (settings/remote-sync-branch))
+    (async-export! new-branch false message :on-success on-success)))
+>>>>>>> v0.62.1
 
 (defn finish-remote-config!
   "Based on the current configuration, fill in any missing settings and finalize remote sync setup.

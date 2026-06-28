@@ -114,10 +114,24 @@
   (let [final-results (encryption/maybe-encrypt-for-stream results)
         timestamp     (t/offset-date-time)]
     (try
+<<<<<<< HEAD
       (app-db/update-or-insert! :model/QueryCache {:query_hash query-hash}
                                 (constantly {:updated_at         timestamp
                                              :results            final-results
                                              :refresh_started_at nil}))
+||||||| 0a60f2436f
+      (or (pos? (t2/update! :model/QueryCache {:query_hash query-hash}
+                            {:updated_at timestamp
+                             :results    final-results}))
+          (first (t2/insert-returning-instances! :model/QueryCache
+                                                 :updated_at timestamp
+                                                 :query_hash query-hash
+                                                 :results final-results)))
+=======
+      (app-db/update-or-insert! :model/QueryCache {:query_hash query-hash}
+                                (constantly {:updated_at timestamp
+                                             :results    final-results}))
+>>>>>>> v0.62.1
       (catch Throwable e
         (log/error e "Error saving query results to cache.")))
     nil))

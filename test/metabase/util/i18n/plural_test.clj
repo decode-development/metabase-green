@@ -10,7 +10,7 @@
   ([formula n]
    (i18n.plural/index (str "plural=" formula) n)))
 
-(deftest basic-arithmetic-test
+(deftest ^:parallel basic-arithmetic-test
   (testing "basic arithmetic"
     (are [formula expected] (= expected (compute formula))
       "0"                         0
@@ -75,7 +75,16 @@
       "1 < 2 ? 1 || 0 : 0"        1
       "1 > 2 ? 1 : 1 && 0"        0
       "1 > 2 ? 0 : 1 < 1 ? 1 : 2" 2
+<<<<<<< HEAD
       "1 < 2 ? 1 < 3 ? 1 : 2 : 3" 1))
+||||||| 0a60f2436f
+      "1 < 2 ? 1 < 3 ? 1 : 2 : 3" 1))
+
+=======
+      "1 < 2 ? 1 < 3 ? 1 : 2 : 3" 1)))
+
+(deftest ^:parallel basic-arithmetic-test-2
+>>>>>>> v0.62.1
   (testing "Error cases"
     (are [formula] (insta/failure? (compute formula))
       ;; Empty formulas
@@ -99,31 +108,67 @@
       "0.3"
       ".9")))
 
-(deftest locale-pluralization-test
+(deftest ^:parallel locale-pluralization-test
   ;; This test uses selected example Plural-Forms from https://www.gnu.org/software/gettext/manual/html_node/Plural-forms.html
   ;; These do not necessarily correspond to languages available in Metabase.
   (testing "English, German, Dutch, Spanish, Portuguese, etc"
     (are [n expected] (= expected (compute "n != 1" n))
       0 1
       1 0
+<<<<<<< HEAD
       2 1))
+||||||| 0a60f2436f
+      2 1))
+
+=======
+      2 1)))
+
+(deftest ^:parallel locale-pluralization-test-2
+>>>>>>> v0.62.1
   (testing "French"
     (are [n expected] (= expected (compute "n > 1" n))
       0 0
       1 0
+<<<<<<< HEAD
       2 1))
+||||||| 0a60f2436f
+      2 1))
+
+=======
+      2 1)))
+
+(deftest ^:parallel locale-pluralization-test-3
+>>>>>>> v0.62.1
   (testing "Latvian"
     (are [n expected] (= expected (compute "n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 : 2" n))
       0   2
       1   0
       11  1
       21  0
+<<<<<<< HEAD
       111 1))
+||||||| 0a60f2436f
+      111 1))
+
+=======
+      111 1)))
+
+(deftest ^:parallel locale-pluralization-test-4
+>>>>>>> v0.62.1
   (testing "Irish"
     (are [n expected] (= expected (compute "n==1 ? 0 : n==2 ? 1 : 2" n))
       1 0
       2 1
+<<<<<<< HEAD
       3 2))
+||||||| 0a60f2436f
+      3 2))
+
+=======
+      3 2)))
+
+(deftest ^:parallel locale-pluralization-test-5
+>>>>>>> v0.62.1
   (testing "Romanian"
     (are [n expected] (= expected (compute "n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2" n))
       0   1
@@ -132,7 +177,16 @@
       19  1
       20  2
       100 2
+<<<<<<< HEAD
       101 1))
+||||||| 0a60f2436f
+      101 1))
+
+=======
+      101 1)))
+
+(deftest ^:parallel locale-pluralization-test-6
+>>>>>>> v0.62.1
   (testing "Russian, Ukrainian, Serbian"
     (are [n expected] (= expected (compute (str "n%10==1 && n%100!=11 ? 0 :"
                                                 "n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2")
@@ -144,7 +198,16 @@
       101 0
       102 1
       109 2
+<<<<<<< HEAD
       110 2))
+||||||| 0a60f2436f
+      110 2))
+
+=======
+      110 2)))
+
+(deftest ^:parallel locale-pluralization-test-7
+>>>>>>> v0.62.1
   (testing "Czech, Slovak"
     (are [n expected] (= expected (compute "(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2" n))
       0 2
@@ -152,7 +215,16 @@
       2 1
       3 1
       4 1
+<<<<<<< HEAD
       5 2))
+||||||| 0a60f2436f
+      5 2))
+
+=======
+      5 2)))
+
+(deftest ^:parallel locale-pluralization-test-8
+>>>>>>> v0.62.1
   (testing "Polish"
     (are [n expected] (= expected (compute (str "n==1 ? 0 :"
                                                 "n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2")

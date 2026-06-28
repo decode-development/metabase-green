@@ -23,8 +23,15 @@
    (java.time Duration)
    (java.util Map Set)
    (java.util.concurrent TimeUnit TimeoutException)
+<<<<<<< HEAD
    (org.graalvm.polyglot Context Engine HostAccess)
    (org.graalvm.polyglot.io FileSystem IOAccess)))
+||||||| 0a60f2436f
+   (org.graalvm.polyglot Context HostAccess)))
+=======
+   (org.graalvm.polyglot Context HostAccess)
+   (org.graalvm.polyglot.io FileSystem IOAccess)))
+>>>>>>> v0.62.1
 
 (set! *warn-on-reflection* true)
 
@@ -246,6 +253,7 @@
   - Full host access (needed for JSON serialization)
   - Read-only filesystem (sources loaded directly from classpath/jar, no disk extraction in prod)"
   ^Context []
+<<<<<<< HEAD
   (let [{:keys [^FileSystem fs python-path std-lib-home core-home]} @python-fs-and-path
         io-access (.. (IOAccess/newBuilder)
                       (fileSystem fs)
@@ -261,6 +269,31 @@
                     std-lib-home (.option "python.StdLibHome" std-lib-home)
                     core-home    (.option "python.CoreHome" core-home))
         ctx       (.build builder)]
+||||||| 0a60f2436f
+  (let [ctx (.. (Context/newBuilder (into-array String ["python"]))
+                (option "engine.WarnInterpreterOnly" "false")
+                ;; python-sources contains both sql_tools.py shim and installed sqlglot
+                (option "python.PythonPath" @python-path)
+                (allowHostAccess HostAccess/ALL)
+                (allowIO true)
+                (build))]
+=======
+  (let [{:keys [^FileSystem fs python-path std-lib-home core-home]} @python-fs-and-path
+        io-access (.. (IOAccess/newBuilder)
+                      (fileSystem fs)
+                      (build))
+        builder   (.. (Context/newBuilder (into-array String ["python"]))
+                      (option "engine.WarnInterpreterOnly" "false")
+                      (option "python.PythonPath" python-path)
+                      (allowHostAccess HostAccess/ALL)
+                      (allowIO io-access))
+        ;; When running from the jar, GraalPy's stdlib is also inside the jar filesystem
+        ;; and we need to tell it where to find the core and stdlib paths explicitly.
+        builder   (cond-> builder
+                    std-lib-home (.option "python.StdLibHome" std-lib-home)
+                    core-home    (.option "python.CoreHome" core-home))
+        ctx       (.build builder)]
+>>>>>>> v0.62.1
     (.eval ctx "python" "import sql_tools")
     ctx))
 

@@ -43,12 +43,12 @@
         (let [conversation-id    (str (random-uuid))
               question           {:role "user" :content "Test native streaming"}
               historical-message {:role "user" :content "previous message"}]
-          (with-redefs [openrouter/openrouter (fn [_]
-                                                (mut/mock-llm-response
-                                                 [{:type :start :id "msg-1"}
-                                                  {:type :text :text "Hello from native agent!"}
-                                                  {:type  :usage       :usage {:promptTokens 10 :completionTokens 5}
-                                                   :model "test-model" :id    "msg-1"}]))]
+          (mt/with-dynamic-fn-redefs [openrouter/openrouter (fn [_]
+                                                              (mut/mock-llm-response
+                                                               [{:type :start :id "msg-1"}
+                                                                {:type :text :text "Hello from native agent!"}
+                                                                {:type  :usage       :usage {:promptTokens 10 :completionTokens 5}
+                                                                 :model "test-model" :id    "msg-1"}]))]
             (testing "Native agent streaming request"
               (mt/with-model-cleanup [:model/MetabotMessage
                                       [:model/MetabotConversation :created_at]]
@@ -252,22 +252,22 @@
 (deftest settings-get-returns-live-models-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-haiku-4-5"
                                      llm.settings/llm-anthropic-api-key    "sk-ant-valid"]
-    (with-redefs [metabot.self/list-models (fn
-                                             ([provider]
-                                              (is (= "anthropic" provider))
-                                              {:models [{:id "claude-haiku-4-5"
-                                                         :display_name "Claude Haiku 4.5"}]})
-                                             ([provider {:keys [api-key]}]
-                                              (is (= "anthropic" provider))
-                                              (is (= "sk-ant-valid" api-key))
-                                              {:models [{:id "claude-sonnet-4-5"
-                                                         :display_name "Claude Sonnet 4.5"}
-                                                        {:id "claude-haiku-4-5"
-                                                         :display_name "Claude Haiku 4.5"}
-                                                        {:id "claude-opus-4-5"
-                                                         :display_name "Claude Opus 4.5"}
-                                                        {:id "claude-opus-4-1"
-                                                         :display_name "Claude Opus 4.1"}]}))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn
+                                                           ([provider]
+                                                            (is (= "anthropic" provider))
+                                                            {:models [{:id "claude-haiku-4-5"
+                                                                       :display_name "Claude Haiku 4.5"}]})
+                                                           ([provider {:keys [api-key]}]
+                                                            (is (= "anthropic" provider))
+                                                            (is (= "sk-ant-valid" api-key))
+                                                            {:models [{:id "claude-sonnet-4-5"
+                                                                       :display_name "Claude Sonnet 4.5"}
+                                                                      {:id "claude-haiku-4-5"
+                                                                       :display_name "Claude Haiku 4.5"}
+                                                                      {:id "claude-opus-4-5"
+                                                                       :display_name "Claude Opus 4.5"}
+                                                                      {:id "claude-opus-4-1"
+                                                                       :display_name "Claude Opus 4.1"}]}))]
       (is (= {:value  "anthropic/claude-haiku-4-5"
               :models [{:id "claude-haiku-4-5"
                         :display_name "Claude Haiku 4.5"
@@ -285,12 +285,12 @@
 
 (deftest settings-get-normalizes-legacy-anthropic-ids-test
   (mt/with-temporary-setting-values [llm.settings/llm-anthropic-api-key "sk-ant-valid"]
-    (with-redefs [metabot.self/list-models (fn [_provider {:keys [api-key]}]
-                                             (is (= "sk-ant-valid" api-key))
-                                             {:models [{:id "claude-3-haiku-20240307"
-                                                        :display_name "Claude 3 Haiku"}
-                                                       {:id "claude-haiku-4-5"
-                                                        :display_name "Claude Haiku 4.5"}]})]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [_provider {:keys [api-key]}]
+                                                           (is (= "sk-ant-valid" api-key))
+                                                           {:models [{:id "claude-3-haiku-20240307"
+                                                                      :display_name "Claude 3 Haiku"}
+                                                                     {:id "claude-haiku-4-5"
+                                                                      :display_name "Claude Haiku 4.5"}]})]
       (is (= {:value  (metabot.settings/llm-metabot-provider)
               :models [{:id "claude-3-haiku-20240307"
                         :display_name "Claude 3 Haiku"
@@ -303,12 +303,12 @@
 
 (deftest settings-get-groups-openrouter-models-test
   (mt/with-temporary-setting-values [llm.settings/llm-openrouter-api-key "sk-or-v1-valid"]
-    (with-redefs [metabot.self/list-models (fn [_provider {:keys [api-key]}]
-                                             (is (= "sk-or-v1-valid" api-key))
-                                             {:models [{:id "openai/gpt-4.1-mini"
-                                                        :display_name "OpenAI: GPT-4.1 mini"}
-                                                       {:id "anthropic/claude-sonnet-4.5"
-                                                        :display_name "Anthropic: Claude Sonnet 4.5"}]})]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [_provider {:keys [api-key]}]
+                                                           (is (= "sk-or-v1-valid" api-key))
+                                                           {:models [{:id "openai/gpt-4.1-mini"
+                                                                      :display_name "OpenAI: GPT-4.1 mini"}
+                                                                     {:id "anthropic/claude-sonnet-4.5"
+                                                                      :display_name "Anthropic: Claude Sonnet 4.5"}]})]
       (is (= {:value  (metabot.settings/llm-metabot-provider)
               :models [{:id "anthropic/claude-sonnet-4.5"
                         :display_name "Anthropic: Claude Sonnet 4.5"
@@ -321,15 +321,15 @@
 
 (deftest settings-get-returns-metabase-models-without-api-key-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "metabase/anthropic/claude-sonnet-4-6"]
-    (with-redefs [metabot.self/list-models (fn
-                                             ([provider]
-                                              (is false (str "unexpected list-models call: " provider)))
-                                             ([provider opts]
-                                              (is (= "anthropic" provider))
-                                              (is (= {:ai-proxy? true} opts))
-                                              {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
-                                                        {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
-                                                        {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn
+                                                           ([provider]
+                                                            (is false (str "unexpected list-models call: " provider)))
+                                                           ([provider opts]
+                                                            (is (= "anthropic" provider))
+                                                            (is (= {:ai-proxy? true} opts))
+                                                            {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
+                                                                      {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
+                                                                      {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
       (is (= {:value  "metabase/anthropic/claude-sonnet-4-6"
               :models [{:id "anthropic/claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
                        {:id "anthropic/claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
@@ -340,16 +340,16 @@
 (deftest settings-put-updates-provider-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-haiku-4-5"
                                      llm.settings/llm-openai-api-key      "sk-valid"]
-    (with-redefs [metabot.self/list-models (fn
-                                             ([provider]
-                                              (is (= "openai" provider))
-                                              {:models [{:id "gpt-4.1-mini"
-                                                         :display_name "GPT-4.1 mini"}]})
-                                             ([provider {:keys [api-key]}]
-                                              (is (= "openai" provider))
-                                              (is (= "sk-valid" api-key))
-                                              {:models [{:id "gpt-4.1-mini"
-                                                         :display_name "GPT-4.1 mini"}]}))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn
+                                                           ([provider]
+                                                            (is (= "openai" provider))
+                                                            {:models [{:id "gpt-4.1-mini"
+                                                                       :display_name "GPT-4.1 mini"}]})
+                                                           ([provider {:keys [api-key]}]
+                                                            (is (= "openai" provider))
+                                                            (is (= "sk-valid" api-key))
+                                                            {:models [{:id "gpt-4.1-mini"
+                                                                       :display_name "GPT-4.1 mini"}]}))]
       (is (= {:value  "openai/gpt-4.1-mini"
               :models [{:id "gpt-4.1-mini"
                         :display_name "GPT-4.1 mini"}]}
@@ -361,15 +361,15 @@
 
 (deftest settings-put-updates-metabase-provider-without-api-key-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-haiku-4-5"]
-    (with-redefs [metabot.self/list-models (fn
-                                             ([provider]
-                                              (is false (str "unexpected list-models call: " provider)))
-                                             ([provider opts]
-                                              (is (= "anthropic" provider))
-                                              (is (= {:ai-proxy? true} opts))
-                                              {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
-                                                        {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
-                                                        {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn
+                                                           ([provider]
+                                                            (is false (str "unexpected list-models call: " provider)))
+                                                           ([provider opts]
+                                                            (is (= "anthropic" provider))
+                                                            (is (= {:ai-proxy? true} opts))
+                                                            {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
+                                                                      {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
+                                                                      {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
       (is (= {:value  "metabase/anthropic/claude-sonnet-4-6"
               :models [{:id "anthropic/claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
                        {:id "anthropic/claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
@@ -382,15 +382,15 @@
 
 (deftest settings-put-defaults-empty-metabase-model-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-haiku-4-5"]
-    (with-redefs [metabot.self/list-models (fn
-                                             ([provider]
-                                              (is false (str "unexpected list-models call: " provider)))
-                                             ([provider opts]
-                                              (is (= "anthropic" provider))
-                                              (is (= {:ai-proxy? true} opts))
-                                              {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
-                                                        {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
-                                                        {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn
+                                                           ([provider]
+                                                            (is false (str "unexpected list-models call: " provider)))
+                                                           ([provider opts]
+                                                            (is (= "anthropic" provider))
+                                                            (is (= {:ai-proxy? true} opts))
+                                                            {:models [{:id "claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
+                                                                      {:id "claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
+                                                                      {:id "claude-opus-4-1" :display_name "Claude Opus 4.1"}]}))]
       (is (= {:value  "metabase/anthropic/claude-sonnet-4-6"
               :models [{:id "anthropic/claude-haiku-4-5" :display_name "Claude Haiku 4.5"}
                        {:id "anthropic/claude-sonnet-4-6" :display_name "Claude Sonnet 4.6"}
@@ -405,14 +405,14 @@
   (mt/with-temp-env-var-value! [mb-llm-anthropic-api-key nil]
     (mt/with-temporary-setting-values [llm.settings/llm-anthropic-api-key nil]
       (let [calls (atom 0)]
-        (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                                 (swap! calls inc)
-                                                 (is (= "anthropic" provider))
-                                                 (is (= "sk-ant-valid" api-key))
-                                                 (is (nil? (llm.settings/llm-anthropic-api-key))
-                                                     "verification should happen before saving the key")
-                                                 {:models [{:id "claude-haiku-4-5"
-                                                            :display_name "Claude Haiku 4.5"}]})]
+        (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                               (swap! calls inc)
+                                                               (is (= "anthropic" provider))
+                                                               (is (= "sk-ant-valid" api-key))
+                                                               (is (nil? (llm.settings/llm-anthropic-api-key))
+                                                                   "verification should happen before saving the key")
+                                                               {:models [{:id "claude-haiku-4-5"
+                                                                          :display_name "Claude Haiku 4.5"}]})]
           (is (= {:value  (metabot.settings/llm-metabot-provider)
                   :models [{:id "claude-haiku-4-5"
                             :display_name "Claude Haiku 4.5"
@@ -430,15 +430,15 @@
     (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-opus-4-1"
                                        llm.settings/llm-anthropic-api-key nil]
       (let [calls (atom 0)]
-        (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                                 (swap! calls inc)
-                                                 (is (= "anthropic" provider))
-                                                 (is (= "sk-ant-valid" api-key))
-                                                 (is (nil? (llm.settings/llm-anthropic-api-key))
-                                                     "verification should happen before saving the key")
-                                                 {:models [{:id "claude-opus-4-1"
-                                                            :display_name "Claude Opus 4.1"
-                                                            :group "Opus"}]})]
+        (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                               (swap! calls inc)
+                                                               (is (= "anthropic" provider))
+                                                               (is (= "sk-ant-valid" api-key))
+                                                               (is (nil? (llm.settings/llm-anthropic-api-key))
+                                                                   "verification should happen before saving the key")
+                                                               {:models [{:id "claude-opus-4-1"
+                                                                          :display_name "Claude Opus 4.1"
+                                                                          :group "Opus"}]})]
           (is (= {:value  "anthropic/claude-opus-4-1"
                   :models [{:id "claude-opus-4-1"
                             :display_name "Claude Opus 4.1"
@@ -459,18 +459,18 @@
     (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "metabase/anthropic/claude-sonnet-4-6"
                                        llm.settings/llm-anthropic-api-key nil]
       (let [calls (atom 0)]
-        (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                                 (swap! calls inc)
-                                                 (is (= "anthropic" provider))
-                                                 (is (= "sk-ant-valid" api-key))
-                                                 (is (nil? (llm.settings/llm-anthropic-api-key))
-                                                     "verification should happen before saving the key")
-                                                 {:models [{:id "claude-sonnet-4-6"
-                                                            :display_name "Claude Sonnet 4.6"
-                                                            :group "Sonnet"}
-                                                           {:id "claude-opus-4-1"
-                                                            :display_name "Claude Opus 4.1"
-                                                            :group "Opus"}]})]
+        (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                               (swap! calls inc)
+                                                               (is (= "anthropic" provider))
+                                                               (is (= "sk-ant-valid" api-key))
+                                                               (is (nil? (llm.settings/llm-anthropic-api-key))
+                                                                   "verification should happen before saving the key")
+                                                               {:models [{:id "claude-sonnet-4-6"
+                                                                          :display_name "Claude Sonnet 4.6"
+                                                                          :group "Sonnet"}
+                                                                         {:id "claude-opus-4-1"
+                                                                          :display_name "Claude Opus 4.1"
+                                                                          :group "Opus"}]})]
           (is (= {:value  "anthropic/claude-sonnet-4-6"
                   :models [{:id "claude-opus-4-1"
                             :display_name "Claude Opus 4.1"
@@ -492,13 +492,13 @@
 (deftest settings-put-blank-model-does-not-reset-when-provider-is-unchanged-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-opus-4-1"
                                      llm.settings/llm-anthropic-api-key "sk-ant-valid"]
-    (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                             (is (= "anthropic" provider))
-                                             (is (= "sk-ant-valid" api-key))
-                                             {:models [{:id "claude-sonnet-4-6"
-                                                        :display_name "Claude Sonnet 4.6"}
-                                                       {:id "claude-opus-4-1"
-                                                        :display_name "Claude Opus 4.1"}]})]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                           (is (= "anthropic" provider))
+                                                           (is (= "sk-ant-valid" api-key))
+                                                           {:models [{:id "claude-sonnet-4-6"
+                                                                      :display_name "Claude Sonnet 4.6"}
+                                                                     {:id "claude-opus-4-1"
+                                                                      :display_name "Claude Opus 4.1"}]})]
       (is (= {:value  "anthropic/claude-opus-4-1"
               :models [{:id "claude-opus-4-1"
                         :display_name "Claude Opus 4.1"
@@ -516,15 +516,15 @@
 (deftest settings-put-rejects-invalid-api-key-test
   (mt/with-temporary-setting-values [llm.settings/llm-openai-api-key nil]
     (let [calls (atom 0)]
-      (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                               (swap! calls inc)
-                                               (is (= "openai" provider))
-                                               (is (= "sk-invalid" api-key))
-                                               (is (nil? (llm.settings/llm-openai-api-key))
-                                                   "failed verification should not save the key")
-                                               (throw (ex-info "OpenAI API key expired or invalid"
-                                                               {:api-error true
-                                                                :status-code 401})))]
+      (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                             (swap! calls inc)
+                                                             (is (= "openai" provider))
+                                                             (is (= "sk-invalid" api-key))
+                                                             (is (nil? (llm.settings/llm-openai-api-key))
+                                                                 "failed verification should not save the key")
+                                                             (throw (ex-info "OpenAI API key expired or invalid"
+                                                                             {:api-error true
+                                                                              :status-code 401})))]
         (let [response (mt/user-http-request :crowberto :put 400 "metabot/settings"
                                              {:provider "openai"
                                               :api-key  "sk-invalid"})]
@@ -535,12 +535,12 @@
 
 (deftest settings-put-does-not-treat-outages-as-invalid-keys-test
   (mt/with-temporary-setting-values [llm.settings/llm-openai-api-key nil]
-    (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                             (is (= "openai" provider))
-                                             (is (= "sk-valid" api-key))
-                                             (throw (ex-info "OpenAI API is not working but not saying why"
-                                                             {:api-error true
-                                                              :status-code 500})))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                           (is (= "openai" provider))
+                                                           (is (= "sk-valid" api-key))
+                                                           (throw (ex-info "OpenAI API is not working but not saying why"
+                                                                           {:api-error true
+                                                                            :status-code 500})))]
       (let [response (mt/user-http-request :crowberto :put 500 "metabot/settings"
                                            {:provider "openai"
                                             :api-key  "sk-valid"})]
@@ -550,12 +550,12 @@
 (deftest settings-put-does-not-save-model-when-preflight-fails-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider "anthropic/claude-haiku-4-5"
                                      llm.settings/llm-anthropic-api-key      "sk-ant-valid"]
-    (with-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
-                                             (is (= "anthropic" provider))
-                                             (is (= "sk-ant-valid" api-key))
-                                             (throw (ex-info "Anthropic API key has insufficient permissions"
-                                                             {:api-error true
-                                                              :status-code 403})))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [provider {:keys [api-key]}]
+                                                           (is (= "anthropic" provider))
+                                                           (is (= "sk-ant-valid" api-key))
+                                                           (throw (ex-info "Anthropic API key has insufficient permissions"
+                                                                           {:api-error true
+                                                                            :status-code 403})))]
       (let [response (mt/user-http-request :crowberto :put 400 "metabot/settings"
                                            {:provider "anthropic"
                                             :model    "claude-sonnet-4-5"})]
@@ -565,10 +565,10 @@
 
 (deftest settings-get-surfaces-invalid-api-key-error-test
   (mt/with-temporary-setting-values [llm.settings/llm-openai-api-key "sk-invalid"]
-    (with-redefs [metabot.self/list-models (fn [_provider _opts]
-                                             (throw (ex-info "OpenAI API key expired or invalid"
-                                                             {:api-error true
-                                                              :status-code 401})))]
+    (mt/with-dynamic-fn-redefs [metabot.self/list-models (fn [_provider _opts]
+                                                           (throw (ex-info "OpenAI API key expired or invalid"
+                                                                           {:api-error true
+                                                                            :status-code 401})))]
       (is (= {:value         (metabot.settings/llm-metabot-provider)
               :api-key-error "OpenAI API key expired or invalid"
               :models        []}
@@ -654,12 +654,12 @@
                           :conversation_id (str (random-uuid))
                           :history         []
                           :state           {}}]
-        (with-redefs [openrouter/openrouter (fn [_]
-                                              (mut/mock-llm-response
-                                               [{:type :start :id "msg-1"}
-                                                {:type :text :text "Hello"}
-                                                {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
-                                                 :model "test-model" :id    "msg-1"}]))]
+        (mt/with-dynamic-fn-redefs [openrouter/openrouter (fn [_]
+                                                            (mut/mock-llm-response
+                                                             [{:type :start :id "msg-1"}
+                                                              {:type :text :text "Hello"}
+                                                              {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
+                                                               :model "test-model" :id    "msg-1"}]))]
           (testing "Regular metabot is blocked when metabot-enabled is false"
             (mt/with-temporary-setting-values [metabot-enabled? false]
               (mt/with-model-cleanup [:model/MetabotMessage
@@ -958,6 +958,7 @@
   (testing "streaming-request passes metabot-id to native-agent-streaming-request"
     (let [captured-args (atom nil)
           test-metabot-id metabot.config/embedded-metabot-id]
+<<<<<<< HEAD
       (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
                     api/check-conversation-access!        (constantly nil)
                     metabot.persistence/start-turn!       (fn [& _]
@@ -967,6 +968,24 @@
                                                             (reset! captured-args args)
                                                             ;; Return a minimal streaming response
                                                             nil)]
+||||||| 0a60f2436f
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/store-aiservice-messages!         (constantly nil)
+                    api/native-agent-streaming-request    (fn [args]
+                                                            (reset! captured-args args)
+                                                            ;; Return a minimal streaming response
+                                                            nil)]
+=======
+      (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                                  api/check-conversation-access!        (constantly nil)
+                                  metabot.persistence/start-turn!       (fn [& _]
+                                                                          {:assistant-msg-id 1
+                                                                           :assistant-external-id "ext-id"})
+                                  api/native-agent-streaming-request    (fn [args]
+                                                                          (reset! captured-args args)
+                                                                          ;; Return a minimal streaming response
+                                                                          nil)]
+>>>>>>> v0.62.1
         (api/streaming-request {:metabot_id      test-metabot-id
                                 :profile_id      nil
                                 :message         "test message"
@@ -995,6 +1014,7 @@
                           :state           {}
                           :debug           false})
           ip-for       (fn [conversation-id]
+<<<<<<< HEAD
                          (:ip_address (t2/select-one :model/MetabotConversation :id conversation-id)))
           info-with-ip (fn [ip] {:origin nil :referer nil :user-agent nil :ip-address ip})]
       (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
@@ -1018,10 +1038,52 @@
                 (let [conversation-id (str (random-uuid))]
                   (api/streaming-request (request-body conversation-id) (info-with-ip "1.2.3.4"))
                   (is (nil? (ip-for conversation-id))))))))))))
+||||||| 0a60f2436f
+                         (:ip_address (t2/select-one :model/MetabotConversation :id conversation-id)))]
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/native-agent-streaming-request    (constantly nil)]
+        (mt/with-test-user :rasta
+          (testing "first writer wins: initial call captures the IP, later calls do not overwrite it"
+            (let [conversation-id (str (random-uuid))]
+              (api/streaming-request (request-body conversation-id) "1.2.3.4" nil)
+              (is (= "1.2.3.4" (ip-for conversation-id)))
+              (api/streaming-request (request-body conversation-id) "5.6.7.8" nil)
+              (is (= "1.2.3.4" (ip-for conversation-id)))))
+          (testing "null IP on pre-feature rows is backfilled on next call"
+            (let [conversation-id (str (random-uuid))]
+              (t2/insert! :model/MetabotConversation {:id conversation-id :user_id (mt/user->id :rasta)})
+              (api/streaming-request (request-body conversation-id) "9.9.9.9" nil)
+              (is (= "9.9.9.9" (ip-for conversation-id))))))))))
+=======
+                         (:ip_address (t2/select-one :model/MetabotConversation :id conversation-id)))
+          info-with-ip (fn [ip] {:origin nil :referer nil :user-agent nil :ip-address ip})]
+      (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                                  api/native-agent-streaming-request    (constantly nil)]
+        (mt/with-premium-features #{:audit-app}
+          (mt/with-test-user :rasta
+            (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
+              (testing "first writer wins: initial call captures the IP, later calls do not overwrite it"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id) (info-with-ip "1.2.3.4"))
+                  (is (= "1.2.3.4" (ip-for conversation-id)))
+                  (api/streaming-request (request-body conversation-id) (info-with-ip "5.6.7.8"))
+                  (is (= "1.2.3.4" (ip-for conversation-id)))))
+              (testing "null IP on pre-feature rows is backfilled on next call"
+                (let [conversation-id (str (random-uuid))]
+                  (t2/insert! :model/MetabotConversation {:id conversation-id :user_id (mt/user->id :rasta)})
+                  (api/streaming-request (request-body conversation-id) (info-with-ip "9.9.9.9"))
+                  (is (= "9.9.9.9" (ip-for conversation-id))))))
+            (mt/with-temporary-setting-values [analytics-pii-retention-enabled false]
+              (testing "ip_address is NOT recorded when analytics-pii-retention-enabled is off"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id) (info-with-ip "1.2.3.4"))
+                  (is (nil? (ip-for conversation-id))))))))))))
+>>>>>>> v0.62.1
 
 (deftest streaming-request-embedding-fields-test
   (mt/with-model-cleanup [:model/MetabotMessage
                           [:model/MetabotConversation :created_at]]
+<<<<<<< HEAD
     (let [request-body (fn [conversation-id]
                          {:metabot_id      metabot.config/embedded-metabot-id
                           :profile_id      nil
@@ -1073,7 +1135,91 @@
                   (let [convo (convo-for conversation-id)]
                     (is (= "customer.example.com" (:embedding_hostname convo)))
                     (is (nil?                     (:embedding_path     convo)))))))))))))
+||||||| 0a60f2436f
+    (let [request-body  (fn [conversation-id]
+                          {:metabot_id      metabot.config/embedded-metabot-id
+                           :profile_id      nil
+                           :message         "hi"
+                           :context         {}
+                           :history         []
+                           :conversation_id conversation-id
+                           :state           {}
+                           :debug           false})
+          embed-url-for (fn [conversation-id]
+                          (:embed_url (t2/select-one :model/MetabotConversation :id conversation-id)))]
+      (with-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                    api/native-agent-streaming-request    (constantly nil)]
+        (mt/with-test-user :rasta
+          (testing "first writer wins: initial call captures the Referer, later calls do not overwrite it"
+            (let [conversation-id (str (random-uuid))]
+              (api/streaming-request (request-body conversation-id) nil "https://host.example.com/page")
+              (is (= "https://host.example.com/page" (embed-url-for conversation-id)))
+              (api/streaming-request (request-body conversation-id) nil "https://other.example.com/other")
+              (is (= "https://host.example.com/page" (embed-url-for conversation-id)))))
+          (testing "null embed_url on pre-feature rows is backfilled on next call"
+            (let [conversation-id (str (random-uuid))]
+              (t2/insert! :model/MetabotConversation {:id conversation-id :user_id (mt/user->id :rasta)})
+              (api/streaming-request (request-body conversation-id) nil "https://host.example.com/backfilled")
+              (is (= "https://host.example.com/backfilled" (embed-url-for conversation-id)))))
+          (testing "missing Referer leaves embed_url null"
+            (let [conversation-id (str (random-uuid))]
+              (api/streaming-request (request-body conversation-id) nil nil)
+              (is (nil? (embed-url-for conversation-id))))))))))
+=======
+    (let [request-body (fn [conversation-id]
+                         {:metabot_id      metabot.config/embedded-metabot-id
+                          :profile_id      nil
+                          :message         "hi"
+                          :context         {}
+                          :history         []
+                          :conversation_id conversation-id
+                          :state           {}
+                          :debug           false})
+          info-with    (fn [embed-referrer]
+                         {:origin     embed-referrer
+                          :referer    embed-referrer
+                          :user-agent nil
+                          :ip-address nil})
+          convo-for    (fn [conversation-id]
+                         (t2/select-one :model/MetabotConversation :id conversation-id))]
+      (mt/with-dynamic-fn-redefs [metabot.config/check-metabot-enabled! (constantly nil)
+                                  api/native-agent-streaming-request    (constantly nil)]
+        (mt/with-premium-features #{:audit-app}
+          (mt/with-test-user :rasta
+            (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
+              (testing "flag on: hostname AND path are recorded"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id)
+                                         (info-with "https://customer.example.com/dashboard"))
+                  (let [convo (convo-for conversation-id)]
+                    (is (= "customer.example.com" (:embedding_hostname convo)))
+                    (is (= "/dashboard"           (:embedding_path     convo))))))
+              (testing "first writer wins: hostname is not overwritten on later calls"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id)
+                                         (info-with "https://host.example.com/page"))
+                  (api/streaming-request (request-body conversation-id)
+                                         (info-with "https://other.example.com/other"))
+                  (let [convo (convo-for conversation-id)]
+                    (is (= "host.example.com" (:embedding_hostname convo)))
+                    (is (= "/page"            (:embedding_path     convo))))))
+              (testing "missing embed referrer leaves both columns null"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id) (info-with nil))
+                  (let [convo (convo-for conversation-id)]
+                    (is (nil? (:embedding_hostname convo)))
+                    (is (nil? (:embedding_path     convo)))))))
+            (mt/with-temporary-setting-values [analytics-pii-retention-enabled false]
+              (testing "flag off: hostname IS still recorded (ungated), path is NOT"
+                (let [conversation-id (str (random-uuid))]
+                  (api/streaming-request (request-body conversation-id)
+                                         (info-with "https://customer.example.com/dashboard"))
+                  (let [convo (convo-for conversation-id)]
+                    (is (= "customer.example.com" (:embedding_hostname convo)))
+                    (is (nil?                     (:embedding_path     convo)))))))))))))
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (deftest agent-streaming-endpoint-captures-embed-referrer-test
   (testing "POST /metabot/agent-streaming captures x-metabase-embed-referrer as embedding_hostname/embedding_path"
     (mt/with-premium-features #{:audit-app}
@@ -1153,10 +1299,116 @@
                     (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
                       (is (nil? (:user_agent           convo)))
                       (is (nil? (:sanitized_user_agent convo))))))))))))))
+||||||| 0a60f2436f
+(deftest agent-streaming-endpoint-captures-referer-test
+  (testing "POST /metabot/agent-streaming captures the Referer header as embed_url"
+    (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider test-provider]
+      (binding [scope/*current-user-metabot-permissions* scope/all-yes-permissions]
+        (with-redefs [openrouter/openrouter (fn [_]
+                                              (mut/mock-llm-response
+                                               [{:type :start :id "msg-1"}
+                                                {:type :text :text "hi"}
+                                                {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
+                                                 :model "test-model" :id    "msg-1"}]))]
+          (mt/with-model-cleanup [:model/MetabotMessage
+                                  [:model/MetabotConversation :created_at]]
+            (let [conversation-id (str (random-uuid))
+                  referer         "https://customer.example.com/dashboard"]
+              (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                    {:request-options {:headers {"referer" referer}}}
+                                    {:message         "hello"
+                                     :context         {}
+                                     :conversation_id conversation-id
+                                     :history         []
+                                     :state           {}})
+              (is (= referer
+                     (:embed_url (t2/select-one :model/MetabotConversation :id conversation-id)))))))))))
+=======
+(deftest agent-streaming-endpoint-captures-embed-referrer-test
+  (testing "POST /metabot/agent-streaming captures x-metabase-embed-referrer as embedding_hostname/embedding_path"
+    (mt/with-premium-features #{:audit-app}
+      (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider test-provider]
+        (binding [scope/*current-user-metabot-permissions* scope/all-yes-permissions]
+          (mt/with-dynamic-fn-redefs [openrouter/openrouter (fn [_]
+                                                              (mut/mock-llm-response
+                                                               [{:type :start :id "msg-1"}
+                                                                {:type :text :text "hi"}
+                                                                {:type  :usage       :usage {:promptTokens 1 :completionTokens 1}
+                                                                 :model "test-model" :id    "msg-1"}]))]
+            (mt/with-model-cleanup [:model/MetabotMessage
+                                    [:model/MetabotConversation :created_at]]
+              (testing "flag on: hostname AND path are recorded"
+                (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
+                  (let [conversation-id (str (random-uuid))
+                        embed-referrer  "https://customer.example.com/dashboard"]
+                    (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                          {:request-options {:headers {"x-metabase-embed-referrer" embed-referrer}}}
+                                          {:message         "hello"
+                                           :context         {}
+                                           :conversation_id conversation-id
+                                           :history         []
+                                           :state           {}})
+                    (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
+                      (is (= "customer.example.com" (:embedding_hostname convo)))
+                      (is (= "/dashboard"           (:embedding_path     convo)))))))
+              (testing "flag off: hostname recorded (ungated), path NOT recorded"
+                (mt/with-temporary-setting-values [analytics-pii-retention-enabled false]
+                  (let [conversation-id (str (random-uuid))
+                        embed-referrer  "https://customer.example.com/dashboard"]
+                    (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                          {:request-options {:headers {"x-metabase-embed-referrer" embed-referrer}}}
+                                          {:message         "hello"
+                                           :context         {}
+                                           :conversation_id conversation-id
+                                           :history         []
+                                           :state           {}})
+                    (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
+                      (is (= "customer.example.com" (:embedding_hostname convo)))
+                      (is (nil?                     (:embedding_path     convo)))))))
+              (testing "standard Referer header (no x-metabase-embed-referrer) leaves both columns null"
+                (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
+                  (let [conversation-id (str (random-uuid))]
+                    (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                          {:request-options {:headers {"referer" "https://customer.example.com/dashboard"}}}
+                                          {:message         "hello"
+                                           :context         {}
+                                           :conversation_id conversation-id
+                                           :history         []
+                                           :state           {}})
+                    (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
+                      (is (nil? (:embedding_hostname convo)))
+                      (is (nil? (:embedding_path     convo)))))))
+              (testing "user-agent recorded only when flag is on"
+                (mt/with-temporary-setting-values [analytics-pii-retention-enabled true]
+                  (let [conversation-id (str (random-uuid))]
+                    (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                          {:request-options {:headers {"user-agent" "Mozilla/5.0 (TestAgent)"}}}
+                                          {:message         "hello"
+                                           :context         {}
+                                           :conversation_id conversation-id
+                                           :history         []
+                                           :state           {}})
+                    (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
+                      (is (= "Mozilla/5.0 (TestAgent)" (:user_agent convo)))
+                      (is (some? (:sanitized_user_agent convo))))))
+                (mt/with-temporary-setting-values [analytics-pii-retention-enabled false]
+                  (let [conversation-id (str (random-uuid))]
+                    (mt/user-http-request :rasta :post 202 "metabot/agent-streaming"
+                                          {:request-options {:headers {"user-agent" "Mozilla/5.0 (TestAgent)"}}}
+                                          {:message         "hello"
+                                           :context         {}
+                                           :conversation_id conversation-id
+                                           :history         []
+                                           :state           {}})
+                    (let [convo (t2/select-one :model/MetabotConversation :id conversation-id)]
+                      (is (nil? (:user_agent           convo)))
+                      (is (nil? (:sanitized_user_agent convo))))))))))))))
+>>>>>>> v0.62.1
 
 (deftest agent-streaming-returns-free-trial-limit-error-when-managed-provider-is-locked-test
   (mt/with-temporary-setting-values [metabot.settings/llm-metabot-provider
                                      "metabase/anthropic/claude-sonnet-4-6"]
+<<<<<<< HEAD
     (with-redefs [premium-features/token-status             (constantly {:meters {:anthropic:claude-sonnet-4-6:tokens {:meter-value 1000000
                                                                                                                        :is-locked   true}}})
                   metabot.config/check-metabot-enabled!     (constantly nil)
@@ -1164,6 +1416,23 @@
                                                               (throw (ex-info "should not store messages" {})))
                   api/native-agent-streaming-request        (fn [& _]
                                                               (throw (ex-info "should not call agent" {})))]
+||||||| 0a60f2436f
+    (with-redefs [premium-features/token-status             (constantly {:meters {:anthropic:claude-sonnet-4-6:tokens {:meter-value 1000000
+                                                                                                                       :is-locked   true}}})
+                  metabot.config/check-metabot-enabled!     (constantly nil)
+                  api/store-aiservice-messages!             (fn [& _]
+                                                              (throw (ex-info "should not store messages" {})))
+                  api/native-agent-streaming-request        (fn [& _]
+                                                              (throw (ex-info "should not call agent" {})))]
+=======
+    (mt/with-dynamic-fn-redefs [premium-features/token-status             (constantly {:meters {:anthropic:claude-sonnet-4-6:tokens {:meter-value 1000000
+                                                                                                                                     :is-locked   true}}})
+                                metabot.config/check-metabot-enabled!     (constantly nil)
+                                metabot.persistence/start-turn!           (fn [& _]
+                                                                            (throw (ex-info "should not store messages" {})))
+                                api/native-agent-streaming-request        (fn [& _]
+                                                                            (throw (ex-info "should not call agent" {})))]
+>>>>>>> v0.62.1
       (mt/user-http-request :rasta :post 402 "metabot/agent-streaming"
                             {:message         "test message"
                              :context         {}

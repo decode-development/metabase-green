@@ -4,7 +4,8 @@
                        ;; allowing `with-temp` here for now since this tests the REST API which doesn't fully use
                        ;; metadata providers.
                        {:discouraged-var {metabase.test/with-temp           {:level :off}
-                                          toucan2.tools.with-temp/with-temp {:level :off}}}}}
+                                          toucan2.tools.with-temp/with-temp {:level :off}}
+                        :deprecated-var {:exclude {metabase.test.data/mbql-query {:namespaces [metabase.query-processor.card-test]}}}}}}
   (:require
    [clojure.string :as str]
    [clojure.test :refer :all]
@@ -76,6 +77,7 @@
   "An MBQL 5 native query whose template tags include a source-card reference and a snippet (neither of which is a
   parameter)."
   []
+<<<<<<< HEAD
   (-> (lib/native-query (mt/metadata-provider)
                         "SELECT *\nFROM ORDERS\nWHERE id = {{id}} AND {{#1234}} AND {{snippet: My Snippet}}")
       (lib/with-template-tags {"id" {:id           "_ID_"
@@ -84,6 +86,38 @@
                                      :type         :number
                                      :required     true
                                      :default      "1"}})))
+||||||| 0a60f2436f
+  (assoc (non-field-filter-query)
+         "abcdef"
+         {:id           "abcdef"
+          :name         "#1234"
+          :display-name "#1234"
+          :type         :card
+          :card-id      1234}
+
+         "xyz"
+         {:id           "xyz"
+          :name         "snippet: My Snippet"
+          :display-name "Snippet: My Snippet"
+          :type         :snippet
+          :snippet-name "My Snippet"
+          :snippet-id   1}))
+=======
+  (assoc (non-field-filter-query)
+         "abcdef"
+         {:id           "abcdef"
+          :name         "#1234"
+          :display-name "#1234"
+          :type         :card
+          :card-id      1234}
+         "xyz"
+         {:id           "xyz"
+          :name         "snippet: My Snippet"
+          :display-name "Snippet: My Snippet"
+          :type         :snippet
+          :snippet-name "My Snippet"
+          :snippet-id   1}))
+>>>>>>> v0.62.1
 
 (deftest ^:parallel card-template-tag-parameters-test
   (testing "Card with a Field filter parameter"

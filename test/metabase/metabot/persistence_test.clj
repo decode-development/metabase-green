@@ -17,7 +17,7 @@
 
 (use-fixtures :once (fixtures/initialize :test-users))
 
-(deftest message->chat-messages-test
+(deftest ^:parallel message->chat-messages-test
   (testing "user text block"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :user
@@ -25,27 +25,63 @@
       (is (= 1 (count result)))
       (is (= {:role "user" :type "text" :message "hello"}
              (select-keys (first result) [:role :type :message])))
+<<<<<<< HEAD
       (is (string? (:id (first result))))))
+||||||| 0a60f2436f
+      (is (string? (:id (first result))))))
+
+=======
+      (is (string? (:id (first result)))))))
+
+(deftest ^:parallel message->chat-messages-test-2
+>>>>>>> v0.62.1
   (testing "assistant standard text block preserves block id"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
                    :data [{:type "text" :text "hi there" :id "block-1"}]})]
       (is (= [{:id "block-1" :role "agent" :type "text" :message "hi there"}]
+<<<<<<< HEAD
              (mapv #(select-keys % [:id :role :type :message]) result)))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             (mapv #(select-keys % [:id :role :type :message]) result))))))
+
+(deftest ^:parallel message->chat-messages-test-3
+>>>>>>> v0.62.1
   (testing "assistant standard text block without id gets a generated one"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
                    :data [{:type "text" :text "no id"}]})]
       (is (= 1 (count result)))
       (is (string? (:id (first result))))
+<<<<<<< HEAD
       (is (= "no id" (:message (first result))))))
+||||||| 0a60f2436f
+      (is (= "no id" (:message (first result))))))
+
+=======
+      (is (= "no id" (:message (first result)))))))
+
+(deftest ^:parallel message->chat-messages-test-4
+>>>>>>> v0.62.1
   (testing "assistant slack-format text block"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
                    :data [{:role "assistant" :_type "TEXT" :content "from slack"}]})]
       (is (= 1 (count result)))
       (is (= {:role "agent" :type "text" :message "from slack"}
+<<<<<<< HEAD
              (select-keys (first result) [:role :type :message])))))
+||||||| 0a60f2436f
+             (select-keys (first result) [:role :type :message])))))
+
+=======
+             (select-keys (first result) [:role :type :message]))))))
+
+(deftest ^:parallel message->chat-messages-test-5
+>>>>>>> v0.62.1
   (testing "tool-input merged with matching tool-output"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
@@ -61,14 +97,32 @@
               :is_error false}
              (select-keys (first result) [:id :role :type :name :status :is_error])))
       (is (= {:query "foo"} (json/decode+kw (:args (first result)))))
+<<<<<<< HEAD
       (is (= {:rows [1 2 3]} (json/decode+kw (:result (first result)))))))
+||||||| 0a60f2436f
+      (is (= {:rows [1 2 3]} (json/decode+kw (:result (first result)))))))
+
+=======
+      (is (= {:rows [1 2 3]} (json/decode+kw (:result (first result))))))))
+
+(deftest ^:parallel message->chat-messages-test-6
+>>>>>>> v0.62.1
   (testing "tool-output flagged as error"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
                    :data [{:type "tool-input" :id "call-2" :function "boom" :arguments {}}
                           {:type "tool-output" :id "call-2" :error "exploded"}]})]
       (is (true? (:is_error (first result))))
+<<<<<<< HEAD
       (is (nil? (:result (first result))))))
+||||||| 0a60f2436f
+      (is (nil? (:result (first result))))))
+
+=======
+      (is (nil? (:result (first result)))))))
+
+(deftest ^:parallel message->chat-messages-test-7
+>>>>>>> v0.62.1
   (testing "tool-input without matching output is left as-is"
     (let [result (metabot-persistence/message->chat-messages
                   {:role :assistant
@@ -76,13 +130,31 @@
       (is (= 1 (count result)))
       (is (= "tool_call" (:type (first result))))
       (is (not (contains? (first result) :result)))
+<<<<<<< HEAD
       (is (not (contains? (first result) :is_error)))))
+||||||| 0a60f2436f
+      (is (not (contains? (first result) :is_error)))))
+
+=======
+      (is (not (contains? (first result) :is_error))))))
+
+(deftest ^:parallel message->chat-messages-test-8
+>>>>>>> v0.62.1
   (testing "unknown block types are dropped"
     (is (= []
            (metabot-persistence/message->chat-messages
             {:role :assistant
              :data [{:type "data-foo" :payload {}}
+<<<<<<< HEAD
                     {:type "mystery"}]}))))
+||||||| 0a60f2436f
+                    {:type "mystery"}]}))))
+
+=======
+                    {:type "mystery"}]})))))
+
+(deftest ^:parallel message->chat-messages-test-9
+>>>>>>> v0.62.1
   (testing "data parts are converted to data_part chat messages"
     (let [blocks [{:type "data" :data-type "navigate_to" :data "/question/1"}
                   {:type "data" :data-type "todo_list"   :version 1 :data [{:id "t1"}]}
@@ -90,11 +162,20 @@
       (is (=? [{:role "agent" :type "data_part" :part {:type "navigate_to" :version 1 :value "/question/1"}}
                {:role "agent" :type "data_part" :part {:type "todo_list"   :version 1 :value [{:id "t1"}]}}
                {:role "agent" :type "data_part" :part {:type "code_edit"   :version 1 :value {:buffer_id "b" :value "v"}}}]
+<<<<<<< HEAD
               (metabot-persistence/message->chat-messages {:role :assistant :data blocks})))))
+||||||| 0a60f2436f
+              (metabot-persistence/message->chat-messages {:role :assistant :data blocks})))))
+
+=======
+              (metabot-persistence/message->chat-messages {:role :assistant :data blocks}))))))
+
+(deftest ^:parallel message->chat-messages-test-10
+>>>>>>> v0.62.1
   (testing "nil :data yields no messages"
     (is (= [] (metabot-persistence/message->chat-messages {:role :user :data nil})))))
 
-(deftest messages->chat-messages-flattens-across-messages-test
+(deftest ^:parallel messages->chat-messages-flattens-across-messages-test
   (let [result (metabot-persistence/messages->chat-messages
                 [{:role :user      :data [{:role "user" :content "hi"}]}
                  {:role :assistant :data [{:type "text" :text "hello!" :id "b1"}
@@ -128,7 +209,7 @@
         (is (= channel-id (:slack_channel_id conversation)))
         (is (= thread-ts (:slack_thread_ts conversation)))))))
 
-(deftest combine-text-parts-xf-merges-consecutive-text-test
+(deftest ^:parallel combine-text-parts-xf-merges-consecutive-text-test
   (testing "consecutive :text parts coalesce; non-text parts split runs"
     (let [parts [{:type :text :text "Hello, "}
                  {:type :text :text "world"}

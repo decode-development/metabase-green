@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 import { mockIsEmbeddingSdk } from "metabase/embedding-sdk/mocks/config-mock";
 import api from "metabase/utils/api";
+||||||| 0a60f2436f
+import api from "metabase/utils/api";
+=======
+import api from "metabase/api/legacy-client";
+import { mockIsEmbeddingSdk } from "metabase/embedding-sdk/mocks/config-mock";
+>>>>>>> v0.62.1
 import Question from "metabase-lib/v1/Question";
 import type { EntityToken } from "metabase-types/api/entity";
 import { createMockCard, createMockDataset } from "metabase-types/api/mocks";
@@ -32,7 +39,7 @@ describe("getDatasetResponse", () => {
   describe("subpath deployment", () => {
     /**
      * We will assert that the result is a relative path without subpath.
-     * Because this URL will be pass to `frontend/src/metabase/utils/api.js`
+     * Because this URL will be pass to `frontend/src/metabase/api/legacy-client.ts`
      * which already takes care of the subpath (api.basename)
      */
     const origin = "http://localhost";

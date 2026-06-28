@@ -36,9 +36,14 @@ export const METABASE_DARK_THEME: MetabaseThemeV2 = {
     "background-error": baseColors.lobster[90],
     "background-success": baseColors.palm[90],
 <<<<<<< HEAD
+<<<<<<< HEAD
     brand: "#135756",
 =======
     "background-success-secondary": baseColors.palm[70],
+||||||| 0a60f2436f
+=======
+    "background-success-secondary": baseColors.palm[70],
+>>>>>>> v0.62.1
     brand: baseColors.blue[40],
 >>>>>>> v0.61.3
     "brand-hover": baseColors.brand[30],
@@ -81,9 +86,18 @@ export const METABASE_DARK_THEME: MetabaseThemeV2 = {
     "tooltip-background": baseColors.orion[70],
     "tooltip-text-secondary": baseColors.orionAlphaInverse[60],
     "tooltip-text": baseColors.orionAlphaInverse[80],
+<<<<<<< HEAD
     warning: "#E2B018",
     "background-warning": "color-mix(in srgb, #E2B018, black 70%)",
     "background-warning-secondary": "color-mix(in srgb, #E2B018, black 50%)",
+||||||| 0a60f2436f
+    warning: baseColors.dubloon[30],
+    "background-warning": baseColors.dubloon[90],
+=======
+    warning: baseColors.dubloon[30],
+    "background-warning": baseColors.dubloon[90],
+    "background-warning-secondary": baseColors.dubloon[70],
+>>>>>>> v0.62.1
     info: baseColors.orion[50],
     "background-info": baseColors.orion[90],
     white: baseColors.orion[110],

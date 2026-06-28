@@ -78,7 +78,37 @@ describe("useUserMetabotPermissions", () => {
   it("returns all false when metabot is globally disabled", async () => {
     setup({ isMetabotEnabled: false });
     const perms = await getPerms();
+<<<<<<< HEAD
     expect(perms.hasMetabotAccess).toBe(false);
+    expect(perms.canUseMetabot).toBe(false);
+    expect(perms.canUseSqlGeneration).toBe(false);
+    expect(perms.canUseNlq).toBe(false);
+    expect(perms.canUseOtherTools).toBe(false);
+  });
+
+  it("does not fetch user permissions without an authenticated user", async () => {
+    setup({ isAuthenticated: false });
+    const perms = await getPerms();
+    expect(perms.hasMetabotAccess).toBe(false);
+    expect(
+      fetchMock.callHistory.called(
+        "path:/api/metabot/permissions/user-permissions",
+      ),
+    ).toBe(false);
+  });
+
+  it("returns access booleans but no usage booleans when AI is not configured", async () => {
+    setup({ isConfigured: false });
+    const perms = await getPerms();
+    expect(perms.hasMetabotAccess).toBe(true);
+    expect(perms.hasSqlGenerationAccess).toBe(true);
+    expect(perms.hasNlqAccess).toBe(true);
+    expect(perms.hasOtherToolsAccess).toBe(true);
+    expect(perms.isConfigured).toBe(false);
+||||||| 0a60f2436f
+=======
+    expect(perms.hasMetabotAccess).toBe(false);
+>>>>>>> v0.62.1
     expect(perms.canUseMetabot).toBe(false);
     expect(perms.canUseSqlGeneration).toBe(false);
     expect(perms.canUseNlq).toBe(false);
@@ -108,6 +138,17 @@ describe("useUserMetabotPermissions", () => {
     expect(perms.canUseSqlGeneration).toBe(false);
     expect(perms.canUseNlq).toBe(false);
     expect(perms.canUseOtherTools).toBe(false);
+  });
+
+  it("does not call the API when the user is unauthenticated (UXW-3939)", async () => {
+    setup({ isAuthenticated: false });
+    const perms = await getPerms();
+    expect(perms.canUseMetabot).toBe(false);
+    expect(
+      fetchMock.callHistory.calls(
+        "path:/api/metabot/permissions/user-permissions",
+      ),
+    ).toHaveLength(0);
   });
 
   it("returns all false when the API returns an error", async () => {

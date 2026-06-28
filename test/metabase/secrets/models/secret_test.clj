@@ -53,24 +53,51 @@
       (encryption-test/with-secret-key (resolve 'encryption-test/secret)
         (check-secret)))))
 
-(deftest get-secret-string-test
+(deftest ^:parallel get-secret-string-test
   (testing "get-secret-string from value only"
     (is (= "titok"
+<<<<<<< HEAD
            (secret/value-as-string :secret-test-driver {:keystore-value "titok"} "keystore"))))
+||||||| 0a60f2436f
+           (secret/value-as-string :secret-test-driver {:keystore-value "titok"} "keystore"))))
+
+=======
+           (secret/value-as-string :secret-test-driver {:keystore-value "titok"} "keystore")))))
+
+(deftest ^:parallel get-secret-string-test-2
+>>>>>>> v0.62.1
   (testing "get-secret-string from value only from the database"
     (mt/with-temp [:model/Secret {id :id} {:name       "private-key"
                                            :kind       ::secret/pem-cert
                                            :value      "titok"
                                            :creator_id (mt/user->id :crowberto)}]
       (is (= "titok"
+<<<<<<< HEAD
              (secret/value-as-string :secret-test-driver {:keystore-id id} "keystore")))))
+||||||| 0a60f2436f
+             (secret/value-as-string :secret-test-driver {:keystore-id id} "keystore")))))
+
+=======
+             (secret/value-as-string :secret-test-driver {:keystore-id id} "keystore"))))))
+
+(deftest ^:parallel get-secret-string-test-3
+>>>>>>> v0.62.1
   (testing "get-secret-string from value only from the database ignore protected-password **MetabasePass**"
     (mt/with-temp [:model/Secret {id :id} {:name       "private-key"
                                            :kind       ::secret/pem-cert
                                            :value      "titok"
                                            :creator_id (mt/user->id :crowberto)}]
       (is (= "titok"
+<<<<<<< HEAD
              (secret/value-as-string :secret-test-driver {:keystore-id id :keystore-value secret/protected-password} "keystore")))))
+||||||| 0a60f2436f
+             (secret/value-as-string :secret-test-driver {:keystore-id id :keystore-value secret/protected-password} "keystore")))))
+
+=======
+             (secret/value-as-string :secret-test-driver {:keystore-id id :keystore-value secret/protected-password} "keystore"))))))
+
+(deftest ^:parallel get-secret-string-test-4
+>>>>>>> v0.62.1
   (testing "get-secret-string from uploaded value"
     (mt/with-temp [:model/Secret {id :id} {:name       "private-key"
                                            :kind       ::secret/pem-cert
@@ -90,7 +117,16 @@
                           :keystore-options "uploaded"}
                          "keystore"))
           "psszt!"
+<<<<<<< HEAD
           (mt/bytes->base64-data-uri (.getBytes "psszt!" "UTF-8"))))))
+||||||| 0a60f2436f
+          (mt/bytes->base64-data-uri (.getBytes "psszt!" "UTF-8"))))))
+
+=======
+          (mt/bytes->base64-data-uri (.getBytes "psszt!" "UTF-8")))))))
+
+(deftest ^:parallel get-secret-string-test-5
+>>>>>>> v0.62.1
   (testing "get-secret-string from local file"
     (mt/with-temp-file [file-db "-1-key.pem"
                         file-value "-2-key.pem"]

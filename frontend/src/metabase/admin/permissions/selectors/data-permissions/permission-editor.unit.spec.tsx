@@ -112,6 +112,7 @@ describe("getShouldShowTransformPermissions", () => {
     });
   });
 });
+<<<<<<< HEAD
 
 describe("getDatabasesPermissionEditor", () => {
   it("does not crash when the selected group has no member count (#74290)", () => {
@@ -196,3 +197,77 @@ describe("getDatabasesPermissionEditor", () => {
     expect(editor?.description).toBeNull();
   });
 });
+||||||| 0a60f2436f
+=======
+
+describe("getDatabasesPermissionEditor", () => {
+  it("does not crash when the selected group has no member count (#74290)", () => {
+    const groupWithoutMemberCount = createMockGroup({
+      id: 1,
+      name: "All Users",
+      magic_group_type: "all-internal-users",
+    });
+    Reflect.deleteProperty(groupWithoutMemberCount, "member_count");
+
+    const permissions: GroupsPermissions = {
+      1: {
+        3: {
+          [DataPermission.CREATE_QUERIES]:
+            DataPermissionValue.QUERY_BUILDER_AND_NATIVE,
+          [DataPermission.VIEW_DATA]: DataPermissionValue.UNRESTRICTED,
+        },
+      },
+    };
+
+    const state = createMockState({
+      admin: createMockAdminState({
+        permissions: createMockPermissionsState({
+          dataPermissions: permissions,
+          originalDataPermissions: permissions,
+        }),
+      }),
+      entities: createMockEntitiesState({
+        databases: [
+          createMockDatabase({
+            id: 3,
+            name: "Test Database",
+            tables: [
+              createMockTable({
+                id: 10,
+                db_id: 3,
+                display_name: "People",
+                schema: "public",
+              }),
+            ],
+          }),
+        ],
+        schemas: [createMockSchema({ id: "3:public", name: "public" })],
+      }),
+      "metabase-api": {
+        ...createMockApiState(),
+        queries: {
+          "listPermissionsGroups({})": {
+            status: QueryStatus.fulfilled,
+            data: [groupWithoutMemberCount],
+            error: undefined,
+            originalArgs: {},
+            requestId: "test-request-groups",
+            endpointName: "listPermissionsGroups",
+            startedTimeStamp: Date.now(),
+            fulfilledTimeStamp: Date.now(),
+          },
+        },
+      },
+    });
+
+    const editor = getDatabasesPermissionEditor(state, {
+      params: {
+        groupId: "1",
+        databaseId: "3",
+      },
+    });
+
+    expect(editor?.description).toBeNull();
+  });
+});
+>>>>>>> v0.62.1

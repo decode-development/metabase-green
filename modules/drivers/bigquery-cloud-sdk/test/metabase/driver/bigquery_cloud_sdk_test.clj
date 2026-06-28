@@ -1,4 +1,7 @@
 (ns ^:mb/driver-tests metabase.driver.bigquery-cloud-sdk-test
+  {:clj-kondo/config '{:linters {:deprecated-var {:exclude {metabase.test.data/mbql-query     {:namespaces [metabase.driver.bigquery-cloud-sdk-test]}
+                                                            metabase.test.data/query          {:namespaces [metabase.driver.bigquery-cloud-sdk-test]}
+                                                            metabase.test.data/run-mbql-query {:namespaces [metabase.driver.bigquery-cloud-sdk-test]}}}}}}
   (:require
    [clojure.core.async :as a]
    [clojure.string :as str]
@@ -8,6 +11,7 @@
    [metabase.driver :as driver]
    [metabase.driver.bigquery-cloud-sdk :as bigquery]
    [metabase.driver.bigquery-cloud-sdk.common :as bigquery.common]
+   [metabase.driver.bigquery-cloud-sdk.workspaces :as bigquery.ws]
    [metabase.driver.common.table-rows-sample :as table-rows-sample]
    [metabase.driver.settings :as driver.settings]
    [metabase.lib.core :as lib]
@@ -28,8 +32,15 @@
    [metabase.warehouse-schema.models.field-values :as field-values]
    [toucan2.core :as t2])
   (:import
+<<<<<<< HEAD
    (com.google.cloud.bigquery BigQuery BigQueryException Field FieldValue FieldValue$Attribute FieldValueList TableResult)
    (com.google.cloud.http HttpTransportOptions)))
+||||||| 0a60f2436f
+   (com.google.cloud.bigquery BigQuery TableResult)))
+=======
+   (com.google.cloud.bigquery BigQuery BigQueryException TableResult)
+   (com.google.cloud.http HttpTransportOptions)))
+>>>>>>> v0.62.1
 
 (set! *warn-on-reflection* true)
 
@@ -1482,3 +1493,30 @@
       (is (= ["INSERT INTO `PRODUCTS_COPY` SELECT * FROM products" nil]
              (driver/compile-insert :bigquery-cloud-sdk {:query {:query "SELECT * FROM products"}
                                                          :output-table :PRODUCTS_COPY}))))))
+<<<<<<< HEAD
+||||||| 0a60f2436f
+
+=======
+
+(deftest ^:parallel ws-sa-description-roundtrip-test
+  (testing "ws-sa-description and ws-sa-description->created-at are exact inverses"
+    ;; This is a contract test. The SA description is the only place the
+    ;; created-at marker is stored, so the writer in
+    ;; `ws-create-service-account!` and the reader used by CI cleanup
+    ;; (`metabase.test.data.bigquery-cloud-sdk/delete-old-isolation-service-accounts!`)
+    ;; must agree on format. If this test fails, orphan SA cleanup will
+    ;; silently break -- expired SAs will accumulate because their created-at
+    ;; can no longer be parsed.
+    (doseq [instant [(java.time.Instant/parse "2026-01-15T10:30:45.123456789Z")
+                     (java.time.Instant/parse "2026-12-31T23:59:59Z")
+                     (java.time.Instant/parse "2020-06-15T00:00:00Z")
+                     (java.time.Instant/now)]]
+      (is (= instant
+             (bigquery.ws/ws-sa-description->created-at (bigquery.ws/ws-sa-description instant)))
+          (str "round-trip failed for " instant))))
+  (testing "ws-sa-description->created-at returns nil for non-conforming inputs"
+    (is (nil? (bigquery.ws/ws-sa-description->created-at nil)))
+    (is (nil? (bigquery.ws/ws-sa-description->created-at "")))
+    (is (nil? (bigquery.ws/ws-sa-description->created-at "some other description")))
+    (is (nil? (bigquery.ws/ws-sa-description->created-at "created-at:not-an-instant")))))
+>>>>>>> v0.62.1

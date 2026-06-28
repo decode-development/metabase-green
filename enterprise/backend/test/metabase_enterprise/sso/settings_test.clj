@@ -278,6 +278,7 @@
 (deftest sso-source-enabled?-unknown-test
   (testing "sso-source-enabled? returns false for unknown sources"
     (is (false? (sso.settings/sso-source-enabled? :unknown-provider)))))
+<<<<<<< HEAD
 
 (deftest other-sso-enabled?-test
   (testing "other-sso-enabled? gates the `/auth/sso` login button (SAML/JWT only)"
@@ -328,3 +329,30 @@
             "sso-enabled? should be true when OIDC is the only provider")
         (is (false? (session/enable-password-login))
             "enable-password-login should be honored when OIDC is enabled")))))
+||||||| 0a60f2436f
+=======
+
+(deftest other-sso-enabled?-test
+  (testing "other-sso-enabled? gates the `/auth/sso` login button (SAML/JWT only)"
+    (testing "false when nothing is enabled"
+      (mt/with-premium-features #{:sso-saml :sso-jwt}
+        (is (false? (sso-settings/other-sso-enabled?)))))
+    (testing "true when SAML is enabled and configured"
+      (mt/with-premium-features #{:sso-saml}
+        (tu/with-temporary-setting-values [saml-identity-provider-uri         default-idp-uri
+                                           saml-identity-provider-certificate default-idp-cert
+                                           saml-enabled                       true]
+          (is (true? (sso-settings/other-sso-enabled?))))))
+    (testing "true when JWT is enabled and configured"
+      (mt/with-premium-features #{:sso-jwt}
+        (tu/with-temporary-setting-values [jwt-identity-provider-uri default-idp-uri
+                                           jwt-shared-secret         "01234"
+                                           jwt-enabled               true]
+          (is (true? (sso-settings/other-sso-enabled?))))))
+    (testing "false when only Slack Connect is enabled (UXW-3940 regression)"
+      ;; Slack Connect uses /auth/sso/slack-connect, not /auth/sso, so it must
+      ;; not flip on the SAML/JWT login button. See UXW-3940.
+      (sso.test-helpers/with-slack-default-setup!
+        (is (true? (sso.settings/slack-connect-enabled)))
+        (is (false? (sso-settings/other-sso-enabled?)))))))
+>>>>>>> v0.62.1

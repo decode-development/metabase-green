@@ -3,7 +3,7 @@
    [clojure.test :refer :all]
    [metabase.query-processor.pivot.postprocess :as pivot.postprocess]))
 
-(deftest build-top-headers-test
+(deftest ^:parallel build-top-headers-test
   (testing "builds top headers with single level hierarchy"
     (let [top-header-items [{:depth 0 :value "A" :span 2}
                             {:depth 0 :value "B" :span 1}]
@@ -12,7 +12,16 @@
           display-name-for-col (fn [idx] (condp = idx 0 "Row"))
           result (#'pivot.postprocess/build-top-headers top-header-items left-header-items row-indexes display-name-for-col)]
       (is (= [["Row" "A" "A" "B"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-top-headers-test-2
+>>>>>>> v0.62.1
   (testing "builds top headers with multi-level hierarchy"
     (let [top-header-items [{:depth 0 :value "A" :span 2}
                             {:depth 1 :value "X" :span 1}
@@ -26,7 +35,16 @@
           result (#'pivot.postprocess/build-top-headers top-header-items left-header-items row-indexes display-name-for-col)]
       (is (= [[nil nil "A" "A" "B"]
               ["Row1" "Row2" "X" "Y" "Z"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-top-headers-test-3
+>>>>>>> v0.62.1
   (testing "handles the case where the max depth of the left-header-items tree is less than the count of row-indexes (#58340)"
     (let [top-header-items [{:depth 0 :value "A" :span 2}
                             {:depth 1 :value "X" :span 1}
@@ -41,7 +59,16 @@
       ;; are collapsed and thus are omitted from the export
       (is (= [[nil "A" "A" "B"]
               ["Row1" "X" "Y" "Z"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-top-headers-test-4
+>>>>>>> v0.62.1
   (testing "handles empty top header items without error"
     (let [top-header-items []
           left-header-items [{:depth 0 :value "Row1" :span 1 :offset 0 :maxDepthBelow 0}]
@@ -51,7 +78,7 @@
       (is (= [["Row"]]
              result)))))
 
-(deftest build-left-headers-test
+(deftest ^:parallel build-left-headers-test
   (testing "builds left headers with single level hierarchy"
     (let [left-header-items [{:depth 0 :value "A" :span 1 :offset 0}
                              {:depth 0 :value "B" :span 1 :offset 1}]
@@ -76,7 +103,7 @@
       (is (= []
              result)))))
 
-(deftest build-full-pivot-test
+(deftest ^:parallel build-full-pivot-test
   (testing "builds full pivot table correctly"
     (let [get-row-section (fn [col-idx row-idx]
                             (case [col-idx row-idx]
@@ -93,7 +120,16 @@
       (is (= [["" "Col X" "Col Y"]
               ["Row A" "100" "300"]
               ["Row B" "200" "400"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-full-pivot-test-2
+>>>>>>> v0.62.1
   (testing "handles multiple measures per column"
     (let [get-row-section (fn [col-idx row-idx]
                             (case [col-idx row-idx]
@@ -110,7 +146,16 @@
       (is (= [["" "Col X" "Col X" "Col Y" "Col Y"]
               ["Row A" "100" "101" "300" "301"]
               ["Row B" "200" "201" "400" "401"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-full-pivot-test-3
+>>>>>>> v0.62.1
   (testing "handles empty left headers without error"
     (let [get-row-section (fn [col-idx row-idx]
                             (case [col-idx row-idx]
@@ -122,7 +167,16 @@
           result (#'pivot.postprocess/build-full-pivot get-row-section left-headers top-headers measure-count)]
       (is (= [["" "Col X"]
               ["100"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-full-pivot-test-4
+>>>>>>> v0.62.1
   (testing "handles no values in row sections without error"
     (let [get-row-section (constantly [])
           left-headers [["Row A"]]
@@ -131,7 +185,16 @@
           result (#'pivot.postprocess/build-full-pivot get-row-section left-headers top-headers measure-count)]
       (is (= [["" "Col X"]
               ["Row A"]]
+<<<<<<< HEAD
              result))))
+||||||| 0a60f2436f
+             result))))
+
+=======
+             result)))))
+
+(deftest ^:parallel build-full-pivot-test-5
+>>>>>>> v0.62.1
   (testing "handles zero measure-count with no error"
     (let [get-row-section (constantly [])
           left-headers []

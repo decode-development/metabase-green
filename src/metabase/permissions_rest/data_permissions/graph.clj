@@ -27,7 +27,8 @@
    :perms/download-results      :download
    :perms/manage-table-metadata :data-model
    :perms/manage-database       :details
-   :perms/transforms            :transforms})
+   :perms/transforms            :transforms
+   :perms/workspaces            :workspaces})
 
 (def ^:private ->api-vals
   {:perms/view-data             {:unrestricted           :unrestricted
@@ -41,7 +42,8 @@
                                  :no                nil}
    :perms/manage-table-metadata {:yes :all :no nil}
    :perms/manage-database       {:yes :yes :no :no}
-   :perms/transforms            {:yes :yes :no :no}})
+   :perms/transforms            {:yes :yes :no :no}
+   :perms/workspaces            {:yes :yes :no :no}})
 
 (defenterprise add-impersonations-to-permissions-graph
   "Augment the permissions graph with active connection impersonation policies. OSS implementation returns graph as-is."
@@ -121,7 +123,8 @@
    :download       {:schemas :full}
    :data-model     {:schemas :all}
    :details        :yes
-   :transforms     :yes})
+   :transforms     :yes
+   :workspaces     :yes})
 
 (def ^:private data-analyst-perms
   "Data Analysts have implicit manage-table-metadata permission for all databases."
@@ -297,6 +300,7 @@
 ;; 3. Diffs desired vs current to produce minimal inserts/deletes
 ;; 4. Applies changes in bulk (2 queries)
 
+<<<<<<< HEAD
 (def ^:private api-val->db-val
   {:view-data      {:unrestricted           :unrestricted
                     :impersonated           :unrestricted
@@ -313,7 +317,37 @@
                     :none :no}
    :details        {:yes :yes :no :no}
    :transforms     {:yes :yes :no :no}})
+||||||| 0a60f2436f
+(defn- update-schema-level-metadata-permissions!
+  [group-id db-id schema new-schema-perms]
+  (if (map? new-schema-perms)
+    (update-table-level-metadata-permissions! group-id db-id schema new-schema-perms)
+    (let [tables (t2/select :model/Table :db_id db-id :schema (not-empty schema))]
+      (when (seq tables)
+        (case new-schema-perms
+          :all
+          (perms/set-table-permissions! group-id :perms/manage-table-metadata (zipmap tables (repeat :yes)))
+=======
+(def ^:private api-val->db-val
+  {:view-data      {:unrestricted           :unrestricted
+                    :impersonated           :unrestricted
+                    :sandboxed              :unrestricted
+                    :legacy-no-self-service :legacy-no-self-service
+                    :blocked                :blocked}
+   :create-queries {:query-builder-and-native :query-builder-and-native
+                    :query-builder            :query-builder
+                    :no                       :no}
+   :download       {:full    :one-million-rows
+                    :limited :ten-thousand-rows
+                    :none    :no}
+   :data-model     {:all  :yes
+                    :none :no}
+   :details        {:yes :yes :no :no}
+   :transforms     {:yes :yes :no :no}
+   :workspaces     {:yes :yes :no :no}})
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (def ^:private api-key->perm-type
   {:view-data      :perms/view-data
    :create-queries :perms/create-queries
@@ -321,6 +355,19 @@
    :data-model     :perms/manage-table-metadata
    :details        :perms/manage-database
    :transforms     :perms/transforms})
+||||||| 0a60f2436f
+          :none
+          (perms/set-table-permissions! group-id :perms/manage-table-metadata (zipmap tables (repeat :no))))))))
+=======
+(def ^:private api-key->perm-type
+  {:view-data      :perms/view-data
+   :create-queries :perms/create-queries
+   :download       :perms/download-results
+   :data-model     :perms/manage-table-metadata
+   :details        :perms/manage-database
+   :transforms     :perms/transforms
+   :workspaces     :perms/workspaces})
+>>>>>>> v0.62.1
 
 (defn- resolve-api-value
   "Translates an API permission value for a single [group-id db-id api-key] into a map of
@@ -360,13 +407,42 @@
         (update [group-id db-id :perms/download-results]
                 #(merge % {nil {:perm_value :no :schema_name nil}})))
 
+<<<<<<< HEAD
     (and (= perm-type :perms/view-data) (not= db-value :unrestricted))
     (update [group-id db-id :perms/transforms]
             #(merge % {nil {:perm_value :no :schema_name nil}}))
+||||||| 0a60f2436f
+(defn- update-schema-level-download-permissions!
+  [group-id db-id schema new-schema-perms]
+  (if (map? new-schema-perms)
+    (update-table-level-download-permissions! group-id db-id schema new-schema-perms)
+    (let [tables (t2/select :model/Table :db_id db-id :schema (not-empty schema))]
+      (when (seq tables)
+        (case new-schema-perms
+          :full
+          (perms/set-table-permissions! group-id :perms/download-results (zipmap tables (repeat :one-million-rows)))
+=======
+    (and (= perm-type :perms/view-data) (not= db-value :unrestricted))
+    (-> (update [group-id db-id :perms/transforms]
+                #(merge % {nil {:perm_value :no :schema_name nil}}))
+        (update [group-id db-id :perms/workspaces]
+                #(merge % {nil {:perm_value :no :schema_name nil}})))
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
     (and (= perm-type :perms/create-queries) (not= db-value :query-builder-and-native))
     (update [group-id db-id :perms/transforms]
             #(merge % {nil {:perm_value :no :schema_name nil}}))))
+||||||| 0a60f2436f
+          :limited
+          (perms/set-table-permissions! group-id :perms/download-results (zipmap tables (repeat :ten-thousand-rows)))
+=======
+    (and (= perm-type :perms/create-queries) (not= db-value :query-builder-and-native))
+    (-> (update [group-id db-id :perms/transforms]
+                #(merge % {nil {:perm_value :no :schema_name nil}}))
+        (update [group-id db-id :perms/workspaces]
+                #(merge % {nil {:perm_value :no :schema_name nil}})))))
+>>>>>>> v0.62.1
 
 (defn- add-implications:table-level
   [desired group-id db-id perm-type table-entries]
@@ -408,6 +484,7 @@
       (empty? table-entries) desired
       :else                  (add-implications:table-level desired group-id db-id perm-type table-entries))))
 
+<<<<<<< HEAD
 (defn- compute-desired-state
   "Process the API graph changes in dependency order, producing a desired-state map of
    {[group-id db-id perm-type] {table-id-or-nil {:perm_value v :schema_name s}}}."
@@ -426,6 +503,29 @@
          :let [api-value (get db-changes api-key)]
          :when api-value]
      [group-id db-id api-key api-value])))
+||||||| 0a60f2436f
+        :none
+        (perms/set-database-permission! group-id db-id :perms/download-results :no)))))
+=======
+(defn- compute-desired-state
+  "Process the API graph changes in dependency order, producing a desired-state map of
+   {[group-id db-id perm-type] {table-id-or-nil {:perm_value v :schema_name s}}}."
+  [graph tables-by-db-schema]
+  (reduce
+   (fn [desired [group-id db-id api-key api-value]]
+     (let [perm-type (api-key->perm-type api-key)
+           entries   (resolve-api-value api-key api-value db-id tables-by-db-schema)]
+       (-> desired
+           (update [group-id db-id perm-type] #(merge % entries))
+           (add-implications group-id db-id perm-type entries))))
+   {}
+   (for [[group-id group-changes] graph
+         [db-id db-changes] group-changes
+         api-key [:details :data-model :download :transforms :workspaces :create-queries :view-data]
+         :let [api-value (get db-changes api-key)]
+         :when api-value]
+     [group-id db-id api-key api-value])))
+>>>>>>> v0.62.1
 
 (defn- expand-to-table-level
   "Expands a db-level permission value to table-level entries for all tables in the db.

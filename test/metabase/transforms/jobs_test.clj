@@ -17,6 +17,7 @@
    [metabase.transforms.jobs :as jobs]
    [metabase.transforms.models.job-run :as transforms.job-run]
    [metabase.transforms.models.transform-run :as transform-run]
+   [metabase.transforms.settings :as transforms.settings]
    [metabase.transforms.test-dataset :as transforms-dataset]
    [metabase.transforms.test-util :refer [with-transform-cleanup!]]
    [metabase.transforms.util :as transforms.u]
@@ -334,6 +335,7 @@
                               (t2/select-one :model/TransformJobRun :id @run-id-atom)))
                       (is (zero? (count @mt/inbox))))))))))))))
 
+<<<<<<< HEAD
 (deftest timeout-old-runs-notifies-admins-for-cron-runs-test
   (mt/with-premium-features #{:transforms-basic}
     (mt/with-model-cleanup [:model/Notification
@@ -383,6 +385,60 @@
             (is (zero? (count @mt/inbox))
                 "manual runs do not trigger admin notifications")))))))
 
+||||||| 0a60f2436f
+=======
+(deftest timeout-old-runs-notifies-admins-for-cron-runs-test
+  (mt/with-premium-features #{:transforms-basic}
+    (mt/with-model-cleanup [:model/Notification
+                            :model/TransformJobRun]
+      (mt/with-fake-inbox
+        (mt/fetch-user :crowberto)
+        (notification.seed/seed-notification!)
+        (mt/with-temp [:model/TransformJob job {:name "stalled-cron-job"
+                                                :schedule "0 0 * * * ? *"}]
+          (let [run (t2/insert-returning-instance! :model/TransformJobRun
+                                                   {:job_id     (:id job)
+                                                    :run_method :cron
+                                                    :status     :started
+                                                    :is_active  true})]
+            ;; push updated_at well past the 4h default timeout so the watchdog fires
+            (t2/update! :model/TransformJobRun
+                        :id (:id run)
+                        {:updated_at #t "2000-01-01T00:00:00Z"})
+            (#'jobs/timeout-and-notify-old-runs!)
+            (is (=? {:status    :timeout
+                     :is_active nil
+                     :message   "Timed out by metabase"}
+                    (t2/select-one :model/TransformJobRun :id (:id run))))
+            ;; crowberto is a superuser and receives the admin notification
+            (is (mt/received-email-subject? :crowberto #"The job .* had failures"))
+            (is (mt/received-email-body? :crowberto #"Timed out by metabase"))))))))
+
+(deftest timeout-old-runs-does-not-notify-for-manual-runs-test
+  (mt/with-premium-features #{:transforms-basic}
+    (mt/with-model-cleanup [:model/Notification
+                            :model/TransformJobRun]
+      (mt/with-fake-inbox
+        (mt/fetch-user :crowberto)
+        (notification.seed/seed-notification!)
+        (mt/with-temp [:model/TransformJob job {:name "stalled-manual-job"
+                                                :schedule "0 0 * * * ? *"}]
+          (let [run (t2/insert-returning-instance! :model/TransformJobRun
+                                                   {:job_id     (:id job)
+                                                    :run_method :manual
+                                                    :status     :started
+                                                    :is_active  true})]
+            (t2/update! :model/TransformJobRun
+                        :id (:id run)
+                        {:updated_at #t "2000-01-01T00:00:00Z"})
+            (#'jobs/timeout-and-notify-old-runs!)
+            (is (=? {:status :timeout}
+                    (t2/select-one :model/TransformJobRun :id (:id run)))
+                "run is still timed out by the watchdog")
+            (is (zero? (count @mt/inbox))
+                "manual runs do not trigger admin notifications")))))))
+
+>>>>>>> v0.62.1
 (deftest job-run-with-tranform-run-failure-test
   (mt/with-premium-features #{:transforms-basic}
     (mt/test-drivers (mt/normal-drivers-with-feature :transforms/table)
@@ -624,3 +680,97 @@
                                        (deref fut2 30000 {:error :timeout})]]
                           (is (every? #(= :succeeded (-> % :result ::jobs/status)) results)
                               "Both threads should succeed"))))))))))))))
+
+(deftest run-transforms-parallel-dispatch-test
+  (mt/with-premium-features #{:transforms-basic}
+    (testing "Independent transforms dispatch concurrently up to the configured limit"
+      (let [plan    [{:id 1} {:id 2} {:id 3} {:id 4}]
+            deps    {1 #{} 2 #{} 3 #{} 4 #{}}
+            barrier (CyclicBarrier. 4)]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 4]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ _]
+                                              (.await barrier 5 TimeUnit/SECONDS))]
+            (is (= {::jobs/status :succeeded}
+                   (jobs/run-transforms! 0 #{1 2 3 4} {:run-method :manual}))
+                "all four independents must reach the barrier (i.e. be live simultaneously)")))))
+    (testing "Dependents wait for their dependencies even when concurrency > 1"
+      (let [plan  [{:id 1} {:id 2}]
+            deps  {1 #{} 2 #{1}}
+            order (atom [])]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 4]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ transform]
+                                              (when (= 1 (:id transform))
+                                                (Thread/sleep 100))
+                                              (swap! order conj (:id transform)))]
+            (jobs/run-transforms! 0 #{1 2} {:run-method :manual})
+            (is (= [1 2] @order) "a must complete before b starts")))))
+    (testing "Dependents of a failed transform are skipped transitively"
+      (let [plan [{:id 1} {:id 2} {:id 3}]
+            deps {1 #{} 2 #{1} 3 #{2}}]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 4]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ transform]
+                                              (when (= 1 (:id transform))
+                                                (throw (ex-info "boom" {}))))]
+            (let [result (jobs/run-transforms! 0 #{1 2 3} {:run-method :manual})]
+              (is (= :failed (::jobs/status result)))
+              (is (= #{1 2 3} (set (map (comp :id ::jobs/transform) (::jobs/failures result))))
+                  "a failed, b & c skipped as dep-failed"))))))
+    (testing "Concurrency is capped by the setting"
+      (let [plan       (mapv (fn [i] {:id i}) (range 1 9))
+            deps       (into {} (map (fn [i] [i #{}]) (range 1 9)))
+            ;; 2-party barrier: workers must pair up before either can exit. This gives
+            ;; deterministic "two alive" windows we can observe via the live counter — no sleeps.
+            partner-up (CyclicBarrier. 2)
+            live       (atom 0)
+            max-live   (atom 0)]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 2]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ _]
+                                              (let [n (swap! live inc)]
+                                                (swap! max-live max n))
+                                              (.await partner-up 5 TimeUnit/SECONDS)
+                                              (swap! live dec))]
+            (jobs/run-transforms! 0 (set (range 1 9)) {:run-method :manual})
+            (is (= 2 @max-live) "should never exceed the concurrency setting")))))
+    (testing "Python transforms are serialized in their own lane (n=1)"
+      (let [py       (fn [id] {:id id :source {:type :python}})
+            plan     [(py 1) (py 2) (py 3) (py 4)]
+            deps     {1 #{} 2 #{} 3 #{} 4 #{}}
+            live     (atom 0)
+            max-live (atom 0)]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 4]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ _]
+                                              (let [n (swap! live inc)]
+                                                (swap! max-live max n))
+                                              ;; A short sleep gives any (hypothetical) parallel
+                                              ;; python worker a window to show up in the counter.
+                                              (Thread/sleep 50)
+                                              (swap! live dec))]
+            (jobs/run-transforms! 0 #{1 2 3 4} {:run-method :manual})
+            (is (= 1 @max-live)
+                "python transforms must run one at a time even with concurrency=4")))))
+    (testing "SQL and Python lanes run in parallel without contending for slots"
+      (let [py          (fn [id] {:id id :source {:type :python}})
+            sql         (fn [id] {:id id})
+            plan        [(sql 1) (sql 2) (sql 3) (py 4) (py 5)]
+            deps        {1 #{} 2 #{} 3 #{} 4 #{} 5 #{}}
+            sql-barrier (CyclicBarrier. 3)
+            py-live     (atom 0)
+            max-py      (atom 0)]
+        (mt/with-temporary-setting-values [transforms.settings/transform-run-job-sql-concurrency 3]
+          (with-redefs [jobs/get-plan       (fn [_] {:order plan :deps deps})
+                        jobs/run-transform! (fn [_ _ _ transform]
+                                              (if (= :python (-> transform :source :type))
+                                                (do (let [n (swap! py-live inc)]
+                                                      (swap! max-py max n))
+                                                    (Thread/sleep 50)
+                                                    (swap! py-live dec))
+                                                (.await sql-barrier 5 TimeUnit/SECONDS)))]
+            (is (= {::jobs/status :succeeded}
+                   (jobs/run-transforms! 0 #{1 2 3 4 5} {:run-method :manual}))
+                "all three SQL transforms reach the barrier (run in parallel)")
+            (is (= 1 @max-py) "python lane stays single-slot")))))))

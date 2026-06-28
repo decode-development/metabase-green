@@ -69,7 +69,13 @@ config:
   settings:
     admin-email: null
     aggregated-query-row-limit: null
+<<<<<<< HEAD
     ai-features-enabled: true
+||||||| 0a60f2436f
+=======
+    ai-features-enabled: true
+    ai-usage-max-retention-days: null
+>>>>>>> v0.62.1
     allowed-iframe-hosts: |-
       youtube.com,
       youtu.be,
@@ -111,16 +117,20 @@ config:
     can-run-adhoc-query-check-threshold: 250
     check-for-updates: true
     config-from-file-sync-databases: true
+    csp-img-allowed-hosts: ''
+    csp-img-enabled: false
     csv-field-separator: ','
     custom-formatting: {}
     custom-geojson: null
     custom-geojson-enabled: true
     custom-homepage: false
     custom-homepage-dashboard: null
+    custom-viz-enabled: false
     dashboards-save-last-used-parameters: true
     db-connection-timeout-ms: 10000
     db-query-timeout-minutes: 20
     default-maps-enabled: true
+    disable-auto-sync: false
     disable-cors-on-localhost: false
     download-row-limit: null
     email-from-address: notifications@metabase.com
@@ -307,6 +317,7 @@ config:
     sync-leaf-fields-limit: 1000
     synchronous-batch-updates: false
     thread-interrupt-escalation-timeout-ms: 0
+    transform-run-job-sql-concurrency: 3
     transform-timeout: 240
     transforms-enabled: false
     unaggregated-query-row-limit: null

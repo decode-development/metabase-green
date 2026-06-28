@@ -172,6 +172,7 @@
               result-fn      (fn [card-id]
                                (let [card (if (= card-id (:id card))
                                             card
+<<<<<<< HEAD
                                             (t2/select-one :model/Card :id card-id))]
                                  {:card     card
                                   :dashcard dashcard
@@ -200,6 +201,63 @@
                                                                        :dashcard_id (u/the-id dashcard)})))))
                                                 fixup-viz-settings
                                                 format-qp-result)}))
+||||||| 0a60f2436f
+                                            (t2/select-one :model/Card :id card-id))
+                                :dashcard dashcard
+                                ;; TODO should this be dashcard?
+                                :type     :card
+                                :result   (-> (qp.dashboard/process-query-for-dashcard
+                                               :dashboard-id  dashboard_id
+                                               :card-id       card-id
+                                               :dashcard-id   (u/the-id dashcard)
+                                               :context       :dashboard-subscription
+                                               :export-format :api
+                                               :parameters    parameters
+                                               :constraints   {}
+                                               :middleware    {:process-viz-settings?             true
+                                                               :js-int-to-string?                 false
+                                                               :add-default-userland-constraints? false}
+                                               :make-run      (fn make-run [qp _export-format]
+                                                                (^:once fn* [query info]
+                                                                  (qp
+                                                                   (qp/userland-query query info)
+                                                               ;; Pass streaming rff with 2000 row threshold
+                                                                   (notification.temp-storage/notification-rff
+                                                                    cells-to-disk-threshold
+                                                                    {:dashboard_id dashboard_id
+                                                                     :card_id card-id
+                                                                     :dashcard_id (u/the-id dashcard)})))))
+                                              fixup-viz-settings
+                                              format-qp-result)})
+=======
+                                            (t2/select-one :model/Card :id card-id))
+                                :dashcard dashcard
+                                ;; TODO should this be dashcard?
+                                :type     :card
+                                :result   (-> (qp.dashboard/process-query-for-dashcard
+                                               :dashboard-id  dashboard_id
+                                               :card-id       card-id
+                                               :dashcard-id   (u/the-id dashcard)
+                                               :context       :dashboard-subscription
+                                               :export-format :api
+                                               :parameters    parameters
+                                               :constraints   {}
+                                               :middleware    {:process-viz-settings?             true
+                                                               :js-int-to-string?                 false
+                                                               :add-default-userland-constraints? false}
+                                               :make-run      (fn make-run [qp _export-format]
+                                                                (^:once fn* [query info]
+                                                                  (qp
+                                                                   (qp/userland-query query info)
+                                                                   ;; Pass streaming rff with 2000 row threshold
+                                                                   (notification.temp-storage/notification-rff
+                                                                    cells-to-disk-threshold
+                                                                    {:dashboard_id dashboard_id
+                                                                     :card_id card-id
+                                                                     :dashcard_id (u/the-id dashcard)})))))
+                                              fixup-viz-settings
+                                              format-qp-result)})
+>>>>>>> v0.62.1
               result         (result-fn card_id)
               series-results (mapv (comp result-fn :id) multi-cards)]
           (log/debugf "Dashcard has %d series" (count multi-cards))

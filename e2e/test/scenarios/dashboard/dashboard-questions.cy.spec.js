@@ -815,6 +815,39 @@ describe("Dashboard > Dashboard Questions", () => {
         cy.button("Save").click();
       });
 
+<<<<<<< HEAD
+      H.saveDashboard();
+      H.getDashboardCard().within(() => {
+        H.echartsContainer().should("be.visible").and("not.be.empty");
+        cy.log("Visit the question directly from a dashcard");
+        cy.findAllByTestId("legend-item")
+          .filter(":contains(Blue Question)")
+          .click();
+      });
+||||||| 0a60f2436f
+      H.saveDashboard();
+      H.dashboardCards()
+        .findByText(/Average Quantity by Month/)
+        .should("be.visible");
+=======
+      // The modal-save dispatches a dashcard update; the dashboard's
+      // "dirty" flag only flips once that commits. Wait for the modal to
+      // unmount before H.saveDashboard so the edit-bar Save sees the new
+      // dashcard state — otherwise its early-return-if-unchanged path
+      // skips the PUT (no @saveDashboardCards request ever fires).
+      H.modal().should("not.exist");
+      H.getDashboardCard()
+        .findAllByTestId("legend-item")
+        .filter(':contains("Blue Question")')
+        .should("exist");
+>>>>>>> v0.62.1
+
+<<<<<<< HEAD
+      cy.log("Move the question to an entirely different dashboard");
+||||||| 0a60f2436f
+      // move the quantity question to an entirely different dashboard
+      H.visitQuestion("@avgQuanityQuestionId");
+=======
       H.saveDashboard();
       H.getDashboardCard().within(() => {
         H.echartsContainer().should("be.visible").and("not.be.empty");
@@ -825,6 +858,7 @@ describe("Dashboard > Dashboard Questions", () => {
       });
 
       cy.log("Move the question to an entirely different dashboard");
+>>>>>>> v0.62.1
       H.openQuestionActions("Move");
 
       H.entityPickerModal().findByText("Orders in a dashboard").click();

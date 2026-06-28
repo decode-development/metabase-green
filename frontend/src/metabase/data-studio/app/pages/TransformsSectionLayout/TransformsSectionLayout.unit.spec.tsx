@@ -90,6 +90,7 @@ const setup = ({
   const path = "/transforms";
 
   renderWithProviders(
+<<<<<<< HEAD
     <Route
       path={path}
       component={(props) => (
@@ -98,6 +99,18 @@ const setup = ({
         </TransformsSectionLayout>
       )}
     />,
+||||||| 0a60f2436f
+    <TransformsSectionLayout>List of transforms</TransformsSectionLayout>,
+=======
+    <Route
+      path={path}
+      component={() => (
+        <TransformsSectionLayout>
+          <div>List of transforms</div>
+        </TransformsSectionLayout>
+      )}
+    />,
+>>>>>>> v0.62.1
     {
       storeInitialState: createMockState({
         settings,

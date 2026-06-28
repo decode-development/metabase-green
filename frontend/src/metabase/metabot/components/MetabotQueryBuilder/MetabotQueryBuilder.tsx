@@ -9,15 +9,21 @@ import _ from "underscore";
 
 import { useGetSuggestedMetabotPromptsQuery } from "metabase/api";
 import { MetabotLogo } from "metabase/common/components/MetabotLogo";
+<<<<<<< HEAD
 import { AIProviderConfigurationModal } from "metabase/metabot/components/AIProviderConfigurationModal";
+||||||| 0a60f2436f
+=======
+import { useSetting } from "metabase/common/hooks";
+import { AIProviderConfigurationModal } from "metabase/metabot/components/AIProviderConfigurationModal";
+>>>>>>> v0.62.1
 import { MetabotPromptInput } from "metabase/metabot/components/MetabotPromptInput";
 import { QueryBuilder } from "metabase/query_builder/containers/QueryBuilder";
 import { useDispatch, useSelector } from "metabase/redux";
 import { useRouter } from "metabase/router";
 import { getSettingsLoading } from "metabase/selectors/settings";
 import {
+  ActionIcon,
   Box,
-  Button,
   Icon,
   Paper,
   Stack,
@@ -83,6 +89,7 @@ const MetabotQueryBuilderInner = () => {
 
   const [title] = useState(getTitleText);
   const [hasError, setHasError] = useState(false);
+  const showIllustrations = useSetting("metabot-show-illustrations");
 
   const suggestedPromptsReq = useGetSuggestedMetabotPromptsQuery({
     metabot_id: metabotId,
@@ -182,7 +189,7 @@ const MetabotQueryBuilderInner = () => {
     <Box className={S.page}>
       <Box className={S.centeredContainer}>
         <Box className={S.greeting}>
-          <MetabotLogo className={S.greetingIcon} />
+          {showIllustrations && <MetabotLogo className={S.greetingIcon} />}
           <Text fz={{ base: "xl", sm: 32 }} fw={600} c="text-primary">
             {title}
           </Text>
@@ -227,7 +234,7 @@ const MetabotQueryBuilderInner = () => {
               ) : (
                 <div />
               )}
-              <Button
+              <ActionIcon
                 className={S.sendButton}
                 variant="filled"
                 size="2rem"
@@ -235,9 +242,10 @@ const MetabotQueryBuilderInner = () => {
                 loading={isDoingScience}
                 onClick={handleEditorSubmit}
                 data-testid="metabot-send-message"
+                aria-label={t`Send`}
               >
                 <Icon name="arrow_up" />
-              </Button>
+              </ActionIcon>
             </Box>
           </Paper>
 

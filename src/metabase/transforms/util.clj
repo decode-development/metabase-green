@@ -14,7 +14,9 @@
    [metabase.driver.sql-jdbc :as sql-jdbc]
    [metabase.driver.util :as driver.u]
    [metabase.models.interface :as mi]
+   [metabase.premium-features.core :as premium-features]
    [metabase.query-processor.pipeline :as qp.pipeline]
+   [metabase.tracing.core :as tracing]
    [metabase.transforms-base.util :as transforms-base.u]
    [metabase.transforms.canceling :as canceling]
    [metabase.transforms.feature-gating :as transforms.gating]
@@ -33,8 +35,8 @@
   "Checking whether we have proper feature flags for using a given transform."
   [transform]
   (cond
-    (transforms-base.u/query-transform? transform) (transforms.gating/query-transforms-enabled?)
-    (transforms-base.u/python-transform? transform) (transforms.gating/python-transforms-enabled?)
+    (transforms-base.u/query-transform? transform) (premium-features/query-transforms-enabled?)
+    (transforms-base.u/python-transform? transform) (premium-features/python-transforms-enabled?)
     :else false))
 
 (defn enabled-source-types-for-user
@@ -135,13 +137,24 @@
   [run-id transform driver {:keys [db-id conn-spec output-schema]} run-transform! & {:keys [ex-message-fn] :or {ex-message-fn ex-message}}]
   ;; local run is responsible for status, using canceling lifecycle
   (try
-    (when-not (driver/schema-exists? driver db-id output-schema)
+    (when (and (not (str/blank? output-schema))
+               (not (driver/schema-exists? driver db-id output-schema)))
       (driver/create-schema-if-needed! driver conn-spec output-schema))
     (let [source-range-params  (transforms-base.u/get-source-range-params transform)
           transform-timeout    (transforms.settings/transform-timeout)
           transform-timeout-ms (u/minutes->ms transform-timeout)]
       (transforms-base.u/save-run-checkpoint-range! run-id source-range-params)
+<<<<<<< HEAD
       (canceling/chan-start-timeout-vthread! run-id transform-timeout)
+||||||| 0a60f2436f
+      (canceling/chan-start-timeout-vthread! run-id (transforms.settings/transform-timeout))
+=======
+      ;; Enrich the active task.transform.* span with checkpoint range attrs for
+      ;; incremental runs. No-op when tracing is disabled or no span is active.
+      (when source-range-params
+        (tracing/add-span-attrs! :tasks (transforms-base.u/checkpoint-span-attrs source-range-params)))
+      (canceling/chan-start-timeout-vthread! run-id transform-timeout)
+>>>>>>> v0.62.1
       (let [cancel-chan (a/promise-chan)
             ret (driver.conn/with-transform-connection
                   ;; Route through the `:transform` JDBC pool, whose `unreturnedConnectionTimeout` will be set
@@ -169,5 +182,5 @@
   "Return true when `table` matches the transform temporary table naming pattern and transforms are enabled."
   [table]
   (boolean
-   (when-let [table-name (and (transforms.gating/any-transforms-enabled?) (:name table))]
+   (when-let [table-name (and (premium-features/any-transforms-enabled?) (:name table))]
      (str/starts-with? (u/lower-case-en table-name) driver.u/transform-temp-table-prefix))))

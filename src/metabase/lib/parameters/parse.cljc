@@ -80,21 +80,45 @@
     (s :guard string?)
     s
 
+<<<<<<< HEAD
     {:type :metabase.lib.parse/param
      :name param-name}
     (lib.params.parse.types/param {:k (or (match-and-normalize-tag-name param-name)
                                           (str/trim param-name))})
+||||||| 0a60f2436f
+    [{:type :metabase.lib.parse/param
+      :name param-name}]
+    (lib.params.parse.types/param {:k (or (match-and-normalize-tag-name param-name)
+                                          (str/trim param-name))})
+=======
+    {:type :metabase.lib.parse/param
+     :name param-name}
+    (lib.params.parse.types/param (or (match-and-normalize-tag-name param-name)
+                                      (str/trim param-name)))
+>>>>>>> v0.62.1
 
     {:type :metabase.lib.parse/function-param
      :name param-name
      :args args}
     (lib.params.parse.types/function-param {:function-name param-name, :args (mapv ->param args)})
 
+<<<<<<< HEAD
     {:type     :metabase.lib.parse/optional
      :contents contents}
     (lib.params.parse.types/optional {:args (mapv ->param contents)})
 
     _ (throw (ex-info "Invalid value." {:value value}))))
+||||||| 0a60f2436f
+    [{:type     :metabase.lib.parse/optional
+      :contents contents}]
+    (lib.params.parse.types/optional {:args (mapv ->param contents)})))
+=======
+    {:type     :metabase.lib.parse/optional
+     :contents contents}
+    (lib.params.parse.types/optional (mapv ->param contents))
+
+    _ (throw (ex-info "Invalid value." {:value value}))))
+>>>>>>> v0.62.1
 
 (mu/defn parse :- [:sequential ::parsed-token]
   "Attempts to parse parameters in string `s`. Parses any optional clauses or parameters found, and returns a sequence

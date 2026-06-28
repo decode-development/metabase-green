@@ -114,12 +114,22 @@
                                              :document "{\"type\":\"doc\",\"content\":[]}"
                                              :creator_id (:id user)}]
       (let [events-published (atom [])]
+<<<<<<< HEAD
         (methodical/add-aux-method-with-unique-key!
          #'events/publish-event! :before :default
          (fn [topic _event]
            (swap! events-published conj topic))
          ::publish-event-spy)
         (try
+||||||| 0a60f2436f
+        (with-redefs [events/publish-event! (fn [topic event]
+                                              (swap! events-published conj topic)
+                                              event)]
+=======
+        (mt/with-dynamic-fn-redefs [events/publish-event! (fn [topic event]
+                                                            (swap! events-published conj topic)
+                                                            event)]
+>>>>>>> v0.62.1
           (#'documents.view-log/update-document-last-viewed-at!*
            [{:id (:id document) :timestamp (t/offset-date-time)}])
           (is (not (contains? (set @events-published) :event/document-update))

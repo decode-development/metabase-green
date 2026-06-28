@@ -1,4 +1,5 @@
 (ns metabase-enterprise.serialization.v2.e2e-test
+  {:clj-kondo/config '{:linters {:deprecated-var {:exclude {metabase.test.data/mbql-query {:namespaces [metabase-enterprise.serialization.v2.e2e-test]}}}}}}
   (:require
    [clojure.java.io :as io]
    [clojure.test :refer :all]
@@ -11,6 +12,9 @@
    [metabase-enterprise.serialization.v2.load :as serdes.load]
    [metabase-enterprise.serialization.v2.storage :as storage]
    [metabase-enterprise.serialization.v2.storage.files :as storage.files]
+   [metabase.lib-be.core :as lib-be]
+   [metabase.lib.core :as lib]
+   [metabase.lib.metadata :as lib.metadata]
    [metabase.models.serialization :as serdes]
    [metabase.query-processor :as qp]
    [metabase.query-processor.compile :as qp.compile]
@@ -183,10 +187,9 @@
               :dashboard-card          (many-random-fks 300 {} {:card_id      [:c 100]
                                                                 :dashboard_id [:d 100]})
               :dimension               (vec (concat
-                                             ;; 20 with both IDs set
-                                             (many-random-fks 20 {}
-                                                              {:field_id                [:field 1000]
-                                                               :human_readable_field_id [:field 1000]})
+                                             (vec (repeatedly 20 #(let [f (random-keyword :field 1000)]
+                                                                    [1 {:refs {:field_id                f
+                                                                               :human_readable_field_id f}}])))
                                              ;; 20 with just :field_id
                                              (many-random-fks 20 {:refs {:human_readable_field_id ::rs/omit}}
                                                               {:field_id [:field 1000]})))
@@ -523,10 +526,7 @@
                          [{:id coll-eid          :model "Collection"}]
                          [{:id model-eid         :model "Card"}]
                          [{:id card-eid          :model "Card"}]
-                         [{:id "Linked database" :model "Database"}]
-                         [{:model "Database" :id "Linked database"}
-                          {:model "Schema"   :id "Public"}
-                          {:model "Table"    :id "Linked table"}]}
+                         [{:id "Linked database" :model "Database"}]}
                        (set (serdes/dependencies extracted-dashboard))))
                 (storage/store! (seq extraction) (storage.files/file-writer dump-dir))))
             (testing "ingest and load"
@@ -1024,3 +1024,23 @@
                   "ingestion should succeed")
               (is (t2/exists? :model/Collection :entity_id coll-eid)
                   "collection should have been imported from old-format path"))))))))
+
+(deftest query-with-missing-table-and-field-test
+  (testing "An exported query whose table/field have been deleted re-imports by synthesizing inactive rows"
+    (mt/with-temp
+      [:model/Database {db-id :id} {}
+       :model/Table    {table-id :id, table-name :name, table-schema :schema} {:db_id db-id}
+       :model/Field    {field-id :id, field-name :name} {:table_id table-id :base_type :type/Text}]
+      (let [mp       (lib-be/application-database-metadata-provider db-id)
+            query    (-> (lib/query mp (lib.metadata/table mp table-id))
+                         (lib/with-fields [(lib.metadata/field mp field-id)]))
+            exported (serdes/export-mbql query)
+            _        (t2/delete! :model/Field :id field-id)
+            _        (t2/delete! :model/Table :id table-id)
+            imported (serdes/import-mbql exported)
+            table    (t2/select-one :model/Table :db_id db-id :schema table-schema :name table-name)
+            field    (t2/select-one :model/Field :table_id (:id table) :name field-name)]
+        (is (=? {:db_id db-id :schema table-schema :name table-name :active false} table))
+        (is (=? {:table_id (:id table) :name field-name :active false}             field))
+        (is (= (:id table) (lib/primary-source-table-id imported)))
+        (is (=? [[:field {} (:id field)]] (lib/fields imported)))))))

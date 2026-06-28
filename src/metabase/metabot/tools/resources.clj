@@ -58,8 +58,15 @@
    [metabase.metabot.tools.entity-details :as entity-details]
    [metabase.metabot.tools.field-stats :as field-stats]
    [metabase.metabot.tools.shared.instructions :as instructions]
+<<<<<<< HEAD
    [metabase.metabot.tools.shared.llm-representations :as llm-rep]
    [metabase.models.interface :as mi]
+||||||| 0a60f2436f
+   [metabase.metabot.tools.shared.llm-representations :as llm-rep]
+=======
+   [metabase.metabot.tools.shared.llm-shape :as llm-shape]
+   [metabase.models.interface :as mi]
+>>>>>>> v0.62.1
    [metabase.transforms.core :as transforms]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
@@ -143,6 +150,7 @@
 
 ;; ----- Item presenters (list-row shapes) -----
 
+<<<<<<< HEAD
 (defn- present-database
   "Trim a database row to a token-frugal item map for list responses."
   [{:keys [id name engine description]}]
@@ -152,7 +160,25 @@
    :engine      (some-> engine clojure.core/name)
    :description description
    :uri         (llm-rep/metabase-uri :database id)})
+||||||| 0a60f2436f
+    (when (< (count parts) 2)
+      (throw (ex-info
+              (str "Invalid URI format: " uri ". "
+                   "Expected: metabase://{type}/{id}[/{sub_resource}[/{sub_resource_id}]]")
+              {:uri uri :parts parts})))
+=======
+(defn- present-database
+  "Trim a database row to a token-frugal item map for list responses."
+  [{:keys [id name engine description]}]
+  {:type        "database"
+   :id          id
+   :name        name
+   :engine      (some-> engine clojure.core/name)
+   :description description
+   :uri         (llm-shape/metabase-uri :database id)})
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-collection
   "Trim a collection row to an item map. `path-name` may be supplied if the caller pre-computed it."
   ([coll] (present-collection coll nil))
@@ -166,7 +192,30 @@
     :is_personal       (boolean personal_owner_id)
     :description       description
     :uri               (llm-rep/metabase-uri :collection id)}))
+||||||| 0a60f2436f
+    {:resource-type (first parts)
+     :resource-id (second parts)
+     :sub-resource (nth parts 2 nil)
+     :sub-resource-id (when (> (count parts) 3)
+                        ;; Handle field IDs with slashes (e.g., c75/17)
+                        (str/join "/" (drop 3 parts)))}))
+=======
+(defn- present-collection
+  "Trim a collection row to an item map. `path-name` may be supplied if the caller pre-computed it."
+  ([coll] (present-collection coll nil))
+  ([{:keys [id name location authority_level description personal_owner_id]} path-name]
+   {:type              "collection"
+    :id                id
+    :name              name
+    :path              (or path-name name)
+    :location          location
+    :authority_level   authority_level
+    :is_personal       (boolean personal_owner_id)
+    :description       description
+    :uri               (llm-shape/metabase-uri :collection id)}))
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-table
   [{:keys [id name display_name schema db_id description]}]
   {:type         "table"
@@ -177,7 +226,32 @@
    :database_id  db_id
    :description  description
    :uri          (llm-rep/metabase-uri :table id)})
+||||||| 0a60f2436f
+(defn- fetch-table-resource
+  "Fetch table resource based on URI components."
+  [{:keys [resource-id sub-resource sub-resource-id]}]
+  (let [table-id (parse-long resource-id)]
+    (cond
+      ;; metabase://table/123/fields/FIELD_ID
+      (and (= sub-resource "fields") sub-resource-id)
+      (field-stats/field-values {:entity-type "table"
+                                 :entity-id table-id
+                                 :field-id sub-resource-id
+                                 :limit 30})
+=======
+(defn- present-table
+  [{:keys [id name display_name schema db_id description]}]
+  {:type         "table"
+   :id           id
+   :name         name
+   :display_name display_name
+   :schema       schema
+   :database_id  db_id
+   :description  description
+   :uri          (llm-shape/metabase-uri :table id)})
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-card
   "Cards (questions or models) — :type on a Card is :question / :model / :metric."
   [{:keys [id name type collection_id description database_id table_id]}]
@@ -194,7 +268,36 @@
      :table_id      table_id
      :description   description
      :uri           (llm-rep/metabase-uri (keyword model-type) id)}))
+||||||| 0a60f2436f
+      ;; metabase://table/123/fields
+      (= sub-resource "fields")
+      (entity-details/get-table-details {:entity-type :table
+                                         :entity-id table-id
+                                         :with-fields? true
+                                         :with-field-values? false
+                                         :with-related-tables? false
+                                         :with-measures? true
+                                         :with-segments? true})
+=======
+(defn- present-card
+  "Cards (questions or models) — :type on a Card is :question / :model / :metric."
+  [{:keys [id name type collection_id description database_id table_id]}]
+  (let [model-type (case type
+                     :model    "model"
+                     :metric   "metric"
+                     :question "question"
+                     "question")]
+    {:type          model-type
+     :id            id
+     :name          name
+     :collection_id collection_id
+     :database_id   database_id
+     :table_id      table_id
+     :description   description
+     :uri           (llm-shape/metabase-uri (keyword model-type) id)}))
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-dashboard
   [{:keys [id name collection_id description]}]
   {:type          "dashboard"
@@ -203,7 +306,28 @@
    :collection_id collection_id
    :description   description
    :uri           (llm-rep/metabase-uri :dashboard id)})
+||||||| 0a60f2436f
+      ;; metabase://table/123
+      (nil? sub-resource)
+      (entity-details/get-table-details {:entity-type :table
+                                         :entity-id table-id
+                                         :with-fields? false
+                                         :with-field-values? false
+                                         :with-related-tables? false
+                                         :with-measures? true
+                                         :with-segments? true})
+=======
+(defn- present-dashboard
+  [{:keys [id name collection_id description]}]
+  {:type          "dashboard"
+   :id            id
+   :name          name
+   :collection_id collection_id
+   :description   description
+   :uri           (llm-shape/metabase-uri :dashboard id)})
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-transform
   [{:keys [id name description source_database_id]}]
   {:type        "transform"
@@ -212,7 +336,22 @@
    :database_id source_database_id
    :description description
    :uri         (llm-rep/metabase-uri :transform id)})
+||||||| 0a60f2436f
+      :else
+      (throw (ex-info (str "Unsupported sub-resource '" sub-resource "' for table. Supported: fields")
+                      {:resource-id resource-id :sub-resource sub-resource})))))
+=======
+(defn- present-transform
+  [{:keys [id name description source_database_id]}]
+  {:type        "transform"
+   :id          id
+   :name        name
+   :database_id source_database_id
+   :description description
+   :uri         (llm-shape/metabase-uri :transform id)})
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 (defn- present-source-card
   "Resolve a source-card id to a typed item map (model / metric / question)."
   [source-card-id]
@@ -224,9 +363,38 @@
     {:type src-type
      :id   source-card-id
      :uri  (llm-rep/metabase-uri (keyword src-type) source-card-id)}))
+||||||| 0a60f2436f
+(defn- fetch-model-or-card-resource
+  "Fetch model resource based on URI components."
+  [{:keys [resource-id resource-type sub-resource sub-resource-id]}]
+  (let [resource-id* (parse-long resource-id)
+        resource-type* (keyword resource-type)]
+    (assert (#{:question :model} resource-type*))
+    (cond
+      ;; metabase://<model,question>/123/fields/FIELD_ID
+      (and (= sub-resource "fields") sub-resource-id)
+      ;; field-values takes type as string and id as integer
+      (field-stats/field-values {:entity-type resource-type
+                                 :entity-id resource-id*
+                                 :field-id sub-resource-id
+                                 :limit 30})
+=======
+(defn- present-source-card
+  "Resolve a source-card id to a typed item map (model / metric / question)."
+  [source-card-id]
+  (let [src-card (t2/select-one [:model/Card :id :type :card_schema] :id source-card-id)
+        src-type (case (:type src-card)
+                   :model  "model"
+                   :metric "metric"
+                   "question")]
+    {:type src-type
+     :id   source-card-id
+     :uri  (llm-shape/metabase-uri (keyword src-type) source-card-id)}))
+>>>>>>> v0.62.1
 
 ;; ----- Lineage helpers -----
 
+<<<<<<< HEAD
 (defn- card-sources-items
   "Build URI list for the entities a card references, FK-only (database_id, table_id, source_card_id)."
   [{:keys [database_id table_id source_card_id]}]
@@ -238,6 +406,29 @@
                           :id   table_id
                           :uri  (llm-rep/metabase-uri :table table_id)})
     source_card_id (conj (present-source-card source_card_id))))
+||||||| 0a60f2436f
+      ;; metabase://<model,question>/123
+      (nil? sub-resource)
+      (entity-details/get-table-details {:entity-type resource-type*
+                                         :entity-id resource-id*
+                                         :with-fields? false
+                                         :with-field-values? false
+                                         :with-related-tables? false
+                                         :with-measures? true
+                                         :with-segments? true})
+=======
+(defn- card-sources-items
+  "Build URI list for the entities a card references, FK-only (database_id, table_id, source_card_id)."
+  [{:keys [database_id table_id source_card_id]}]
+  (cond-> []
+    database_id    (conj {:type "database"
+                          :id   database_id
+                          :uri  (llm-shape/metabase-uri :database database_id)})
+    table_id       (conj {:type "table"
+                          :id   table_id
+                          :uri  (llm-shape/metabase-uri :table table_id)})
+    source_card_id (conj (present-source-card source_card_id))))
+>>>>>>> v0.62.1
 
 (defn- transform-source-table-ids
   "FK-only source tables for a transform: walks (:source :source-tables) entries when present."
@@ -283,6 +474,7 @@
         items    (mapv (fn [c] (present-collection c (when tree? (path-of c)))) colls)]
     (list-result (if tree? :collections-tree :collections-root) items)))
 
+<<<<<<< HEAD
 (defn- fetch-user-recents []
   (let [recents (or (-> (activity-feed/get-recents api/*current-user-id* [:views])
                         :recents)
@@ -299,7 +491,30 @@
                            :uri       (llm-rep/metabase-uri (keyword type) id)}))
                       recents)]
     (list-result :recent-items items)))
+||||||| 0a60f2436f
+      :else
+      (throw (ex-info (str "Unsupported sub-resource '" sub-resource "' for metric. Supported: dimensions")
+                      {:resource-id resource-id :sub-resource sub-resource})))))
+=======
+(defn- fetch-user-recents []
+  (let [recents (or (-> (activity-feed/get-recents api/*current-user-id* [:views])
+                        :recents)
+                    [])
+        items   (mapv (fn [{:keys [id name model timestamp]}]
+                        (let [type (case model
+                                     "card"    "question"
+                                     "dataset" "model"
+                                     (or model "item"))]
+                          {:type      type
+                           :id        id
+                           :name      name
+                           :timestamp timestamp
+                           :uri       (llm-shape/metabase-uri (keyword type) id)}))
+                      recents)]
+    (list-result :recent-items items)))
+>>>>>>> v0.62.1
 
+<<<<<<< HEAD
 ;; ----- Database drill-down -----
 
 (defn- fetch-database [id-str]
@@ -494,8 +709,213 @@
 
 (defn- fetch-transform [id-str]
   {:structured-output (-> (transforms/get-transform (parse-long id-str))
+||||||| 0a60f2436f
+(defn- fetch-transform-resource
+  "Fetch transform resource."
+  [{:keys [resource-id sub-resource]}]
+  (when sub-resource
+    (throw (ex-info (str "Transforms do not support sub-resources. Got: " sub-resource)
+                    {:resource-id resource-id :sub-resource sub-resource})))
+  {:structured-output (-> (transforms/get-transform (parse-long resource-id))
+=======
+;; ----- Database drill-down -----
+
+(defn- fetch-database [id-str]
+  (let [db (api/read-check :model/Database (parse-long id-str))]
+    (entity-result (present-database db))))
+
+(defn- fetch-database-tables [id-str]
+  (let [db-id  (parse-long id-str)
+        _      (api/read-check :model/Database db-id)
+        tables (->> (t2/select [:model/Table :id :name :display_name :schema :db_id :description]
+                               :db_id  db-id
+                               :active true
+                               {:order-by [[:%lower.schema :asc] [:%lower.name :asc]]})
+                    (filter mi/can-read?)
+                    (mapv present-table))]
+    (list-result :database-tables tables)))
+
+(defn- fetch-database-models [id-str]
+  (let [db-id  (parse-long id-str)
+        _      (api/read-check :model/Database db-id)
+        models (->> (t2/select [:model/Card :id :name :type :description :card_schema
+                                :collection_id :database_id :table_id]
+                               :type        :model
+                               :database_id db-id
+                               :archived    false
+                               {:order-by [[:%lower.name :asc]]})
+                    (filter mi/can-read?)
+                    (mapv present-card))]
+    (list-result :database-models models)))
+
+(defn- fetch-database-schemas [id-str]
+  (let [db-id   (parse-long id-str)
+        _       (api/read-check :model/Database db-id)
+        rows    (t2/query
+                 {:select-distinct [:schema]
+                  :from            [:metabase_table]
+                  :where           [:and [:= :db_id db-id] [:= :active true]]
+                  :order-by        [[:schema :asc]]})
+        schemas (->> rows
+                     (keep :schema)
+                     (mapv (fn [s]
+                             {:type        "schema"
+                              :name        s
+                              :database_id db-id
+                              :uri         (llm-shape/metabase-uri :database db-id "schemas" s "tables")})))]
+    (list-result :database-schemas schemas)))
+
+(defn- fetch-database-schema-tables [id-str schema-name]
+  (let [db-id  (parse-long id-str)
+        _      (api/read-check :model/Database db-id)
+        tables (->> (t2/select [:model/Table :id :name :display_name :schema :db_id :description]
+                               :db_id  db-id
+                               :schema schema-name
+                               :active true
+                               {:order-by [[:%lower.name :asc]]})
+                    (filter mi/can-read?)
+                    (mapv present-table))]
+    (list-result :database-schema-tables tables)))
+
+;; ----- Collection drill-down -----
+
+(defn- fetch-collection [id-str]
+  (let [coll (api/read-check :model/Collection (parse-long id-str))]
+    (entity-result (present-collection coll))))
+
+(defn- fetch-collection-items [id-str]
+  (let [coll-id        (parse-long id-str)
+        coll           (api/read-check :model/Collection coll-id)
+        cards          (->> (t2/select [:model/Card :id :name :type :description :card_schema
+                                        :collection_id :database_id :table_id]
+                                       {:where    [:and [:= :collection_id coll-id] [:= :archived false]]
+                                        :order-by [[:%lower.name :asc]]})
+                            (filter mi/can-read?))
+        dashboards     (->> (t2/select [:model/Dashboard :id :name :description :collection_id]
+                                       :collection_id coll-id
+                                       :archived      false
+                                       {:order-by [[:%lower.name :asc]]})
+                            (filter mi/can-read?))
+        subcollections (->> (t2/select [:model/Collection :id :name :location :authority_level
+                                        :description :personal_owner_id]
+                                       :location (str (:location coll) coll-id "/")
+                                       :archived false
+                                       {:order-by [[:%lower.name :asc]]})
+                            (filter mi/can-read?))
+        items          (concat (map present-collection subcollections)
+                               (map present-card cards)
+                               (map present-dashboard dashboards))]
+    (list-result :collection-items items)))
+
+(defn- fetch-collection-subcollections [id-str]
+  (let [coll-id (parse-long id-str)
+        coll    (api/read-check :model/Collection coll-id)
+        subs    (->> (t2/select [:model/Collection :id :name :location :authority_level
+                                 :description :personal_owner_id]
+                                :location (str (:location coll) coll-id "/")
+                                :archived false
+                                {:order-by [[:%lower.name :asc]]})
+                     (filter mi/can-read?)
+                     (mapv present-collection))]
+    (list-result :collection-subcollections subs)))
+
+;; ----- Table -----
+
+(defn- table-details
+  "Shared `entity-details/get-table-details` call for both /table/{id} and /table/{id}/fields.
+   `entity-type` is :table, :model, or :question."
+  [entity-type id with-fields?]
+  (entity-details/get-table-details {:entity-type          entity-type
+                                     :entity-id            id
+                                     :with-fields?         with-fields?
+                                     :with-field-values?   false
+                                     :with-related-tables? (= entity-type :table)
+                                     :with-measures?       true
+                                     :with-segments?       true}))
+
+(defn- fetch-table [id-str]
+  (table-details :table (parse-long id-str) false))
+
+(defn- fetch-table-fields [id-str]
+  (table-details :table (parse-long id-str) true))
+
+(defn- fetch-table-field [id-str field-id]
+  (field-stats/field-values {:entity-type "table"
+                             :entity-id   (parse-long id-str)
+                             :field-id    field-id
+                             :limit       30}))
+
+(defn- fetch-table-derived [id-str]
+  (let [table-id   (parse-long id-str)
+        table      (api/read-check :model/Table table-id)
+        db-id      (:db_id table)
+        cards      (->> (t2/select [:model/Card :id :name :type :description :card_schema
+                                    :collection_id :database_id :table_id]
+                                   :table_id table-id
+                                   :archived false
+                                   {:order-by [[:%lower.name :asc]]})
+                        (filter mi/can-read?)
+                        (mapv present-card))
+        ;; SQL-narrow transforms by source_database_id (a transform can only reference
+        ;; tables in its source DB). Pull `:source` in the same select to extract source
+        ;; table ids in memory — no per-row re-fetch. Apply the can-read? check last,
+        ;; on the already-narrowed candidate set.
+        transforms (when db-id
+                     (->> (t2/select [:model/Transform :id :name :description
+                                      :source_database_id :source]
+                                     :source_database_id db-id
+                                     {:order-by [[:%lower.name :asc]]})
+                          (filter (fn [t] (some #{table-id} (transform-source-table-ids t))))
+                          (filter mi/can-read?)
+                          (mapv present-transform)))]
+    (list-result :table-derived (concat cards transforms))))
+
+;; ----- Card (model / question) -----
+
+(defn- fetch-card
+  "type-str is \"model\" or \"question\"."
+  [type-str id-str]
+  (table-details (keyword type-str) (parse-long id-str) false))
+
+(defn- fetch-card-fields [type-str id-str]
+  (table-details (keyword type-str) (parse-long id-str) true))
+
+(defn- fetch-card-field [type-str id-str field-id]
+  (field-stats/field-values {:entity-type type-str
+                             :entity-id   (parse-long id-str)
+                             :field-id    field-id
+                             :limit       30}))
+
+(defn- fetch-card-sources [id-str]
+  (let [card (api/read-check :model/Card (parse-long id-str))]
+    (list-result :card-sources (card-sources-items card))))
+
+;; ----- Metric -----
+
+(defn- fetch-metric [id-str]
+  (entity-details/get-metric-details {:metric-id                 (parse-long id-str)
+                                      :with-queryable-dimensions false
+                                      :with-field-values         false}))
+
+(defn- fetch-metric-dimensions [id-str]
+  (entity-details/get-metric-details {:metric-id                 (parse-long id-str)
+                                      :with-queryable-dimensions true
+                                      :with-field-values         false}))
+
+(defn- fetch-metric-dimension [id-str dim-id]
+  (field-stats/field-values {:entity-type "metric"
+                             :entity-id   (parse-long id-str)
+                             :field-id    dim-id
+                             :limit       30}))
+
+;; ----- Transform -----
+
+(defn- fetch-transform [id-str]
+  {:structured-output (-> (transforms/get-transform (parse-long id-str))
+>>>>>>> v0.62.1
                           (assoc :result-type :entity :type :transform))})
 
+<<<<<<< HEAD
 (defn- fetch-transform-sources [id-str]
   (let [transform        (transforms/get-transform (parse-long id-str))
         source-table-ids (transform-source-table-ids transform)
@@ -532,6 +952,52 @@
 
 (defn- fetch-dashboard [id-str]
   (let [result (entity-details/get-dashboard-details {:dashboard-id (parse-long id-str)})]
+||||||| 0a60f2436f
+(defn- fetch-dashboard-resource
+  "Fetch dashboard resource."
+  [{:keys [resource-id sub-resource]}]
+  (when sub-resource
+    (throw (ex-info (str "Dashboards do not support sub-resources. Got: " sub-resource)
+                    {:resource-id resource-id :sub-resource sub-resource})))
+  (let [result (entity-details/get-dashboard-details {:dashboard-id (parse-long resource-id)})]
+=======
+(defn- fetch-transform-sources [id-str]
+  (let [transform        (transforms/get-transform (parse-long id-str))
+        source-table-ids (transform-source-table-ids transform)
+        source-tables    (when (seq source-table-ids)
+                           (->> (t2/select [:model/Table :id :name :display_name :schema :db_id :description]
+                                           :id [:in (set source-table-ids)])
+                                (filter mi/can-read?)
+                                (mapv present-table)))
+        db-id            (:source_database_id transform)
+        items            (cond-> []
+                           db-id         (conj {:type "database"
+                                                :id   db-id
+                                                :uri  (llm-shape/metabase-uri :database db-id)})
+                           source-tables (into source-tables))]
+    (list-result :transform-sources items)))
+
+(defn- fetch-transform-target [id-str]
+  (let [transform    (transforms/get-transform (parse-long id-str))
+        ;; The target table is hydrated by `transforms/get-transform` without a per-table
+        ;; permission check (the read-check on the Transform itself only verifies *source*
+        ;; tables are readable). Gate it here so users who can read the transform definition
+        ;; but lack perms on the target database don't see the target's name/schema.
+        target-table (when-let [tt (:table transform)]
+                       (when (mi/can-read? tt) tt))
+        db-id        (:target_db_id transform)
+        items        (cond-> []
+                       db-id        (conj {:type "database"
+                                           :id   db-id
+                                           :uri  (llm-shape/metabase-uri :database db-id)})
+                       target-table (conj (present-table target-table)))]
+    (list-result :transform-target items)))
+
+;; ----- Dashboard -----
+
+(defn- fetch-dashboard [id-str]
+  (let [result (entity-details/get-dashboard-details {:dashboard-id (parse-long id-str)})]
+>>>>>>> v0.62.1
     (if-let [dashboard (:structured-output result)]
       {:structured-output (assoc dashboard :result-type :entity)}
       {:status-code 404 :output (:output result)})))
@@ -637,20 +1103,28 @@
 
 (defn- format-content
   "Format a tool result as an LLM-ready string.
-   Dispatches to the right llm-rep formatter based on :result-type.
+   Dispatches to the right llm-shape formatter based on :result-type.
    Returns the :output string directly for error results (404s etc.)."
   [content]
   (if-let [structured (:structured-output content)]
     (case (:result-type structured)
       ;; NOTE: keep in sync with agent/tools/metadata.clj/format-field-metadata-output
       :field-metadata (format-with-instructions
-                       (llm-rep/field-metadata->xml structured)
+                       (llm-shape/field-metadata->xml structured)
                        instructions/field-metadata-instructions)
+<<<<<<< HEAD
       :entity         (llm-rep/entity->xml structured)
       :metabot-list   (llm-rep/metabot-list->xml structured)
       :metabot-entity (llm-rep/metabot-entity->xml structured)
+||||||| 0a60f2436f
+      :entity         (llm-rep/entity->xml structured)
+=======
+      :entity         (llm-shape/entity->xml structured)
+      :metabot-list   (llm-shape/metabot-list->xml structured)
+      :metabot-entity (llm-shape/metabot-entity->xml structured)
+>>>>>>> v0.62.1
       ;; fallback — should not happen, but better than EDN
-      (llm-rep/entity->xml structured))
+      (llm-shape/entity->xml structured))
     ;; error case — :output is already a string
     (:formatted content)))
 

@@ -13,6 +13,7 @@
    [metabase.server.auth-wrapper :as auth-wrapper]
    [metabase.server.middleware.embedding-sdk-bundle :as mw.embedding-sdk-bundle]
    [metabase.server.routes.index :as index]
+   [metabase.server.routes.static :as static]
    [metabase.system.core :as system]
    [metabase.util :as u]
    [metabase.util.log :as log]
@@ -76,8 +77,18 @@
   ;; hashes, so we serve them with far-future immutable cache headers.
   (GET ["/embedding-sdk/chunks/:filename" :filename #"[^/]+\.js"] [filename :as request]
     ((mw.embedding-sdk-bundle/serve-chunk-handler filename) request))
+<<<<<<< HEAD
   ;; fall back to serving _all_ other files under /app
   (route/resources "/" {:root "frontend_client/app"})
+||||||| 0a60f2436f
+
+  ;; fall back to serving _all_ other files under /app
+  (route/resources "/" {:root "frontend_client/app"})
+=======
+  ;; fall back to serving _all_ other files under /app, preferring
+  ;; pre-compressed (.br, .gz) variants when the browser supports them
+  (static/precompressed-resources "/" {:root "frontend_client/app"})
+>>>>>>> v0.62.1
   (route/not-found {:status 404 :body "Not found."}))
 
 (mu/defn- api-handler :- ::api.macros/handler
