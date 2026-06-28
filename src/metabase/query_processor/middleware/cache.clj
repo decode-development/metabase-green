@@ -12,6 +12,7 @@
    [clojure.string :as str]
    [java-time.api :as t]
    [medley.core :as m]
+   [metabase.batch-processing.core :as grouper]
    [metabase.cache.core :as cache]
    [metabase.config.core :as config]
    [metabase.lib.core :as lib]
@@ -45,14 +46,31 @@
 
 ;;; ------------------------------------------------------ Save ------------------------------------------------------
 
-(defn- purge! [backend]
-  (try
-    (log/tracef "Purging cache entries older than %s" (u/format-seconds (cache/query-caching-max-ttl)))
-    (i/purge-old-entries! backend (cache/query-caching-max-ttl))
-    (log/trace "Successfully purged old cache entries.")
-    :done
-    (catch Throwable e
-      (log/errorf e "Error purging old cache entries: %s" (ex-message e)))))
+(def ^:private purge-interval-seconds
+  "How often, at most, to purge cache entries older than [[cache/query-caching-max-ttl]]. Purging on every save is
+  wasteful: the max TTL is measured in days, and on instances with a high cache-miss rate the repeated DELETEs are
+  expensive and contend with concurrent cache writes."
+  (* 5 60))
+
+(def ^:private purge-queue-capacity 1000)
+
+(defn- purge!* [backends]
+  (doseq [backend (distinct backends)]
+    (try
+      (log/tracef "Purging cache entries older than %s" (u/format-seconds (cache/query-caching-max-ttl)))
+      (i/purge-old-entries! backend (cache/query-caching-max-ttl))
+      (log/trace "Successfully purged old cache entries.")
+      (catch Throwable e
+        (log/errorf e "Error purging old cache entries: %s" (ex-message e))))))
+
+(defonce ^:private purge-queue
+  (delay (grouper/start!
+          #'purge!*
+          :capacity purge-queue-capacity
+          :interval (* purge-interval-seconds 1000))))
+
+(defn- schedule-purge! [backend]
+  (grouper/submit! @purge-queue backend))
 
 (def ^:private ^:dynamic *in-fn*
   "The `in-fn` provided by [[impl/do-with-serialization]]."
@@ -87,7 +105,7 @@
           (log/trace "Got serialized bytes; saving to cache backend")
           (i/save-results! *backend* query-hash bytez)
           (log/debug "Successfully cached results for query.")
-          (purge! *backend*))))
+          (schedule-purge! *backend*))))
     :done
     (catch Throwable e
       (if (= (:type (ex-data e)) ::impl/max-bytes)
@@ -95,35 +113,34 @@
         (log/errorf e "Error saving query results to cache: %s" (ex-message e))))))
 
 (defn- save-results-xform [start-time-ns metadata query-hash strategy rf]
-  (let [has-rows? (volatile! false)]
-    (add-object-to-cache! (assoc metadata
-                                 :cache-version cache-version
-                                 :last-ran      (t/zoned-date-time)))
-    (fn
-      ([] (rf))
+  (add-object-to-cache! (assoc metadata
+                               :cache-version cache-version
+                               :last-ran      (t/zoned-date-time)))
+  (fn
+    ([] (rf))
 
-      ([result]
-       (add-object-to-cache! (if (map? result)
-                               (m/dissoc-in result [:data :rows])
-                               {}))
-       (let [duration-ms     (/ (- (System/nanoTime) start-time-ns) 1e6)
-             min-duration-ms (:min-duration-ms strategy 0)
-             eligible?       (and @has-rows?
-                                  (> duration-ms min-duration-ms))]
-         (log/infof "Query %s took %s to run; minimum for cache eligibility is %s; %s"
-                    (i/short-hex-hash query-hash)
-                    (u/format-milliseconds duration-ms)
-                    (u/format-milliseconds min-duration-ms)
-                    (if eligible? "eligible" "not eligible"))
-         (when eligible?
-           (cache-results! query-hash))
-         (rf (cond-> result
-               (map? result) (update :cache/details assoc :hash query-hash :stored (boolean eligible?))))))
+    ([result]
+     (add-object-to-cache! (if (map? result)
+                             (m/dissoc-in result [:data :rows])
+                             {}))
+     (let [duration-ms     (/ (- (System/nanoTime) start-time-ns) 1e6)
+           min-duration-ms (:min-duration-ms strategy 0)
+           ;; cache any query that ran long enough -- including ones that returned no rows, so a slow empty result
+           ;; doesn't get re-run at full cost on every request
+           eligible?       (> duration-ms min-duration-ms)]
+       (log/infof "Query %s took %s to run; minimum for cache eligibility is %s; %s"
+                  (i/short-hex-hash query-hash)
+                  (u/format-milliseconds duration-ms)
+                  (u/format-milliseconds min-duration-ms)
+                  (if eligible? "eligible" "not eligible"))
+       (when eligible?
+         (cache-results! query-hash))
+       (rf (cond-> result
+             (map? result) (update :cache/details assoc :hash query-hash :stored (boolean eligible?))))))
 
-      ([acc row]
-       (add-object-to-cache! row)
-       (vreset! has-rows? true)
-       (rf acc row)))))
+    ([acc row]
+     (add-object-to-cache! row)
+     (rf acc row))))
 
 ;;; ----------------------------------------------------- Fetch ------------------------------------------------------
 
