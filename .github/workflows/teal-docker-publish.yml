@@ -57,7 +57,7 @@ jobs:
             BRANCH="${{ github.event.pull_request.head.ref }}"
 
             if [[ "$MERGED" == "true" ]] && [[ "$BRANCH" =~ ^sync/upstream- ]]; then
-              VERSION=$(gh api repos/metabase/metabase/releases/latest --jq '.tag_name')
+              VERSION="${BRANCH#sync/upstream-}"
               echo "should_build=true"  >> "$GITHUB_OUTPUT"
               echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
               echo "Upstream-sync PR merged — building $VERSION"

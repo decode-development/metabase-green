@@ -56,8 +56,7 @@ jobs:
         id: status
         run: |
           TAG="${{ steps.upstream.outputs.release_tag }}"
-          DATE=$(date +%Y-%m-%d)
-          BRANCH="sync/upstream-$DATE"
+          BRANCH="sync/upstream-$TAG"
 
           if git merge-base --is-ancestor "$TAG" HEAD; then
             echo "result=already-synced" >> "$GITHUB_OUTPUT"
