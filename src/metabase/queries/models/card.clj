@@ -990,7 +990,9 @@
                                                  :entity_id (u/generate-nano-id))
                                                 (cond-> (nil? type)
                                                   (assoc :type :question))
-                                                (m/update-existing :dataset_query lib-be/normalize-query))
+                                                ;; Strict so a malformed query throws here instead of being silently
+                                                ;; coerced to `{}`. See #74615.
+                                                (m/update-existing :dataset_query #(lib-be/normalize-query nil % {:strict? true})))
          {:keys [metadata metadata-future]} (card.metadata/maybe-async-result-metadata
                                              ;; 1. This function is called when storing metadata.
                                              ;; 2. The metadata for storage shouldn't have remaps.
@@ -1252,7 +1254,11 @@
 ;;; ------------------------------------------------- Serialization --------------------------------------------------
 
 (defn- export-result-metadata [card _k metadata]
-  (if (and (seq metadata) (model? card))
+  (cond
+    (empty? metadata)
+    ::serdes/skip
+
+    (model? card)
     (let [native?   (lib/native? (:dataset_query card))
           keep-keys (into #{:name}
                           (map u/->snake_case_en)
@@ -1262,6 +1268,25 @@
                   (m/update-existing :fk_target_field_id serdes/*export-field-fk*)
                   (m/update-existing :id serdes/*export-field-fk*)))
             metadata))
+
+    ;; Native non-model cards keep their result_metadata. Unlike MBQL cards, their columns can't be re-derived
+    ;; from the query at import time without executing the SQL, and downstream questions that join them depend
+    ;; on this metadata to resolve join columns. We whitelist the portable keys (dropping computed `:lib/*`,
+    ;; `:fingerprint`, etc.) rather than the model soft-key set, since native columns also need their structural
+    ;; type info preserved.
+    (lib/native? (:dataset_query card))
+    (let [keep-keys #{:name :base_type :effective_type :field_ref :database_type
+                      :display_name :semantic_type :description :visibility_type :settings
+                      :fk_target_field_id :id :table_id}]
+      (mapv (fn [m]
+              (-> (select-keys m keep-keys)
+                  (m/update-existing :table_id           serdes/*export-table-fk*)
+                  (m/update-existing :id                 serdes/*export-field-fk*)
+                  (m/update-existing :field_ref          serdes/export-mbql)
+                  (m/update-existing :fk_target_field_id serdes/*export-field-fk*)))
+            metadata))
+
+    :else
     ::serdes/skip))
 
 (defn- import-result-metadata [metadata]
