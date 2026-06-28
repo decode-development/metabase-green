@@ -37,6 +37,12 @@
    [metabase-enterprise.data-complexity-score.synonym-source :as synonym-source]
    [metabase-enterprise.data-complexity-score.task.complexity-score :as task.complexity-score]
    [metabase.app-db.core :as mdb]
+<<<<<<< HEAD
+=======
+   ;; Loaded for side-effect: derives setting :on-change event topics from :metabase/event.
+   ;; metabase.core.core/entrypoint normally does this, but the standalone CLI bypasses it.
+   [metabase.driver.init]
+>>>>>>> v0.62.3
    [metabase.util.json :as json]))
 
 (set! *warn-on-reflection* true)
@@ -125,16 +131,28 @@
       (validate-dir! representation-dir))))
 
 (defn- run-appdb-mode!
+<<<<<<< HEAD
   "Score against the live appdb the same way the cron does; optionally persist."
+=======
+  "Score against the live appdb; optionally persist the row.
+  Snowplow is off here, so we don't advance `data-complexity-scoring-last-fingerprint` — leave that to the cron."
+>>>>>>> v0.62.3
   [write?]
   (mdb/setup-db-without-migrations!)
   (let [result (complexity/complexity-scores
                 (assoc (synonym-source/complexity-scores-opts)
+<<<<<<< HEAD
                        :metabot-scope (metabot-scope/internal-metabot-scope)))]
     (when write?
       (let [fp (task.complexity-score/current-fingerprint)]
         (data-complexity-score/record-score! fp "appdb" result)
         (task.complexity-score/maybe-advance-last-fingerprint! fp result)))
+=======
+                       :metabot-scope (metabot-scope/internal-metabot-scope)
+                       :emit-snowplow? false))]
+    (when write?
+      (data-complexity-score/record-score! (task.complexity-score/current-fingerprint) "appdb" result))
+>>>>>>> v0.62.3
     result))
 
 (defn- run-representation-mode!

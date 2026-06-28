@@ -1,11 +1,17 @@
 import userEvent from "@testing-library/user-event";
 
+<<<<<<< HEAD
 import { act, screen, within } from "__support__/ui";
+=======
+import { act, screen, waitFor, within } from "__support__/ui";
+>>>>>>> v0.62.3
 import type { SetupOpts } from "metabase/admin/performance/components/test-utils";
 import {
   setupStrategyEditorForDatabases as baseSetup,
   changeInput,
+  getCacheStrategySelect,
   getSaveButton,
+  selectCacheStrategy,
 } from "metabase/admin/performance/components/test-utils";
 import { getShortStrategyLabel } from "metabase/admin/performance/utils";
 import { PLUGIN_CACHING } from "metabase/plugins";
@@ -35,6 +41,7 @@ describe("StrategyEditorForDatabases", () => {
 
   it("shows four policy options for the default policy", async () => {
     await userEvent.click(await screen.findByLabelText(/Edit default policy/));
+<<<<<<< HEAD
     expect(await screen.findAllByRole("radio")).toHaveLength(4);
   });
 
@@ -45,6 +52,20 @@ describe("StrategyEditorForDatabases", () => {
     expect(await screen.findAllByRole("radio")).toHaveLength(5);
     expect(
       screen.getByRole("radio", { name: /Use default/i }),
+=======
+    await userEvent.click(getCacheStrategySelect());
+    expect(await screen.findAllByRole("option")).toHaveLength(4);
+  });
+
+  it("shows five policy options for a database (adds 'Default')", async () => {
+    await userEvent.click(
+      await screen.findByLabelText(/Edit policy for database 'Database 1'/),
+    );
+    await userEvent.click(getCacheStrategySelect());
+    expect(await screen.findAllByRole("option")).toHaveLength(5);
+    expect(
+      screen.getByRole("option", { name: /^Default/i }),
+>>>>>>> v0.62.3
     ).toBeInTheDocument();
   });
 
@@ -90,14 +111,11 @@ describe("StrategyEditorForDatabases", () => {
       screen.queryByRole("button", { name: "Save changes" }),
     ).not.toBeInTheDocument();
 
-    const durationStrategyRadioButton = await screen.findByRole("radio", {
-      name: /keep the cache for a number of hours/i,
-    });
-    expect(durationStrategyRadioButton).toBeChecked();
+    expect(await getCacheStrategySelect()).toHaveValue("Duration");
 
     expect((await screen.findAllByRole("spinbutton")).length).toBe(1);
 
-    await changeInput(/Cache results for this many hours/, 24, 48);
+    await changeInput(/Cache duration/, 24, 48);
 
     await userEvent.click(
       await screen.findByTestId("strategy-form-submit-button"),
@@ -109,10 +127,7 @@ describe("StrategyEditorForDatabases", () => {
       ),
     ).toBeInTheDocument();
 
-    const noCacheStrategyRadioButton = await screen.findByRole("radio", {
-      name: /Don.t cache/i,
-    });
-    await userEvent.click(noCacheStrategyRadioButton);
+    await selectCacheStrategy(/Don.t cache/i);
 
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
 
@@ -120,19 +135,18 @@ describe("StrategyEditorForDatabases", () => {
       await screen.findByTestId("strategy-form-submit-button"),
     );
 
-    expect(
-      await screen.findByTestId("strategy-form-submit-button"),
-    ).toHaveTextContent(/Saved/i);
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("strategy-form-submit-button"),
+      ).toHaveTextContent(/Saved/i),
+    );
 
     expect(await screen.findByLabelText(/Edit default policy/)).toHaveAttribute(
       "aria-label",
       "Edit default policy (currently: No caching)",
     );
 
-    const adaptiveStrategyRadioButton = await screen.findByRole("radio", {
-      name: /Adaptive/i,
-    });
-    await userEvent.click(adaptiveStrategyRadioButton);
+    await selectCacheStrategy(/Adaptive/i);
 
     expect((await screen.findAllByRole("spinbutton")).length).toBe(2);
 
@@ -150,7 +164,7 @@ describe("StrategyEditorForDatabases", () => {
     ).toBeInTheDocument();
   });
 
-  it("lets user change policy for Database 1 from 'Adaptive' to 'Duration' to 'Don't cache to 'Use default'", async () => {
+  it("lets user change policy for Database 1 from 'Adaptive' to 'Duration' to 'Don't cache to 'Default'", async () => {
     const editButton = await screen.findByLabelText(
       `Edit policy for database 'Database 1' (currently: Adaptive)`,
     );
@@ -160,10 +174,7 @@ describe("StrategyEditorForDatabases", () => {
       screen.queryByRole("button", { name: "Save changes" }),
     ).not.toBeInTheDocument();
 
-    const noCacheStrategyRadioButton = await screen.findByRole("radio", {
-      name: /Don.t cache/i,
-    });
-    await userEvent.click(noCacheStrategyRadioButton);
+    await selectCacheStrategy(/Don.t cache/i);
 
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
 
@@ -177,21 +188,20 @@ describe("StrategyEditorForDatabases", () => {
       ),
     ).toBeInTheDocument();
 
-    const durationStrategyRadioButton = await screen.findByRole("radio", {
-      name: /keep the cache for a number of hours/i,
-    });
-    await userEvent.click(durationStrategyRadioButton);
+    await selectCacheStrategy(/^Duration/i);
 
     expect((await screen.findAllByRole("spinbutton")).length).toBe(1);
 
-    await changeInput(/Cache results for this many hours/, 24, 48);
+    await changeInput(/Cache duration/, 24, 48);
 
     await userEvent.click(
       await screen.findByTestId("strategy-form-submit-button"),
     );
-    expect(
-      await screen.findByTestId("strategy-form-submit-button"),
-    ).toHaveTextContent(/Saved/i);
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("strategy-form-submit-button"),
+      ).toHaveTextContent(/Saved/i),
+    );
 
     expect(
       await screen.findByLabelText(/Edit policy for database 'Database 1'/),
@@ -201,10 +211,7 @@ describe("StrategyEditorForDatabases", () => {
     );
 
     // Switch to Adaptive strategy
-    const multiplierStrategyRadioButton = await screen.findByRole("radio", {
-      name: /Adaptive/i,
-    });
-    await userEvent.click(multiplierStrategyRadioButton);
+    await selectCacheStrategy(/Adaptive/i);
 
     expect((await screen.findAllByRole("spinbutton")).length).toBe(2);
 
@@ -236,9 +243,13 @@ describe("StrategyEditorForDatabases", () => {
       ),
     );
 
+<<<<<<< HEAD
     await userEvent.click(
       await screen.findByRole("radio", { name: /Schedule/i }),
     );
+=======
+    await selectCacheStrategy(/^Schedule/i);
+>>>>>>> v0.62.3
 
     const pickOption = async (testId: string, optionName: string) => {
       await userEvent.click(screen.getByTestId(testId));
@@ -298,17 +309,28 @@ describe("StrategyEditorForDatabases (cache_preemptive enabled)", () => {
   // The preemptive caching switch only renders for question/dashboard targets.
   // Root and database forms must not show it, regardless of strategy.
   it.each([
+<<<<<<< HEAD
     ["default policy", /Edit default policy/, /Duration/i],
     ["default policy", /Edit default policy/, /Schedule/i],
     ["a database", /Edit policy for database 'Database 1'/, /Duration/i],
     ["a database", /Edit policy for database 'Database 1'/, /Schedule/i],
+=======
+    ["default policy", /Edit default policy/, /^Duration/i],
+    ["default policy", /Edit default policy/, /^Schedule/i],
+    ["a database", /Edit policy for database 'Database 1'/, /^Duration/i],
+    ["a database", /Edit policy for database 'Database 1'/, /^Schedule/i],
+>>>>>>> v0.62.3
   ])(
     "does not show the preemptive caching switch for %s with %p strategy",
     async (_label, launcherLabel, strategyName) => {
       await userEvent.click(await screen.findByLabelText(launcherLabel));
+<<<<<<< HEAD
       await userEvent.click(
         await screen.findByRole("radio", { name: strategyName }),
       );
+=======
+      await selectCacheStrategy(strategyName);
+>>>>>>> v0.62.3
       expect(
         screen.queryByTestId("preemptive-caching-switch"),
       ).not.toBeInTheDocument();

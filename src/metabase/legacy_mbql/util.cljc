@@ -3,12 +3,9 @@
 
   DEPRECATED: Use [[metabase.lib.core]] for MBQL manipulation in all new code."
   {:deprecated "0.57.0"}
-  (:refer-clojure :exclude [some mapv every? not-empty get-in #?(:clj for)])
+  (:refer-clojure :exclude [every? not-empty get-in #?(:clj for)])
   (:require
-   #?@(:clj
-       [[metabase.legacy-mbql.jvm-util :as mbql.jvm-u]])
    [clojure.string :as str]
-   [metabase.legacy-mbql.predicates :as mbql.preds]
    [metabase.legacy-mbql.schema :as mbql.s]
    [metabase.lib.schema.common :as lib.schema.common]
    [metabase.lib.schema.id :as lib.schema.id]
@@ -17,9 +14,13 @@
    [metabase.util.i18n :as i18n]
    [metabase.util.log :as log]
    [metabase.util.malli :as mu]
+<<<<<<< HEAD
    [metabase.util.match :as match]
    [metabase.util.performance :refer [some mapv every? not-empty get-in #?(:clj for)]]
    [metabase.util.time :as u.time]))
+=======
+   [metabase.util.performance :refer [every? not-empty get-in #?(:clj for)]]))
+>>>>>>> v0.62.3
 
 (defn mbql-clause?
   "True if `x` is an MBQL clause (a sequence with a keyword as its first arg).
@@ -46,19 +47,6 @@
      ((set k-or-ks) (first x))
      (= k-or-ks (first x)))))
 
-(defn check-clause
-  "Returns `x` if it's an instance of a clause defined by keyword(s) `k-or-ks`
-
-    (check-clause :count [:count 10]) ; => [:count 10]
-    (check-clause? #{:+ :- :* :/} [:+ 10 20]) ; -> [:+ 10 20]
-    (check-clause :sum [:count 10]) ; => nil
-
-  DEPRECATED: use [[metabase.lib.core/clause-of-type?]] going forward"
-  {:deprecated "0.57.0"}
-  [k-or-ks x]
-  (when (is-clause? k-or-ks x)
-    x))
-
 (mu/defn normalize-token :- [:or :keyword :string]
   "Convert a string or keyword in various cases (`lisp-case`, `snake_case`, or `SCREAMING_SNAKE_CASE`) to a lisp-cased
   keyword.
@@ -81,6 +69,7 @@
           (str/replace \_ \-)
           keyword))))
 
+<<<<<<< HEAD
 (defn- combine-compound-filters-of-type
   {:deprecated "0.57.0"}
   [compound-type subclauses]
@@ -543,6 +532,10 @@
   #_{:clj-kondo/ignore [:deprecated-var]}
   (-> filter-clause desugar-filter-clause negate* simplify-compound-filter))
 
+=======
+(declare field-options)
+
+>>>>>>> v0.62.3
 (mu/defn query->source-table-id :- [:maybe ::lib.schema.id/table]
   "Return the source Table ID associated with `query`, if applicable; handles nested queries as well. If `query` is
   `nil`, returns `nil`.
@@ -709,6 +702,7 @@
     (do
       (log/warnf "%s is not a valid temporal unit for %s; not adding to clause %s" unit base-type (pr-str clause))
       clause)))
+<<<<<<< HEAD
 
 (defn referenced-field-ids
   "Find all the `:field` references with integer IDs in `coll`, which can be a full MBQL query, a snippet of MBQL, or a
@@ -740,3 +734,5 @@
 
     :else
     field-id-or-form))
+=======
+>>>>>>> v0.62.3

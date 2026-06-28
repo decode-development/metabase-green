@@ -1,4 +1,5 @@
 (ns metabase.notification.api.notification-test
+  {:clj-kondo/config '{:linters {:deprecated-var {:exclude {metabase.test.data/mbql-query {:namespaces [metabase.notification.api.notification-test]}}}}}}
   (:require
    [clojure.test :refer :all]
    [java-time.api :as t]
@@ -404,6 +405,26 @@
                                                                         :payload      {}
                                                                         :payload_type "notification/card"})))))
 
+(deftest put-creator-id-permissions-test
+  (testing "PUT /api/notification/:id and creator_id"
+    (notification.tu/with-card-notification
+      [notification {:notification {:creator_id (mt/user->id :rasta)}}]
+      (let [notification-id (:id notification)
+            put!            (fn [user expected-status body]
+                              (mt/user-http-request user :put expected-status
+                                                    (format "notification/%d" notification-id)
+                                                    (merge notification body)))]
+        (testing "superuser can reassign owner"
+          (put! :crowberto 200 {:creator_id (mt/user->id :lucky)})
+          (is (= (mt/user->id :lucky)
+                 (t2/select-one-fn :creator_id :model/Notification notification-id))))
+        (testing "non-superuser cannot reassign owner — even the current owner (403 from mi/can-update?)"
+          (put! :lucky 403 {:creator_id (mt/user->id :rasta)})
+          (is (= (mt/user->id :lucky)
+                 (t2/select-one-fn :creator_id :model/Notification notification-id))))
+        (testing "echoing back the unchanged creator_id is fine for non-superusers"
+          (put! :lucky 200 {:creator_id (mt/user->id :lucky)}))))))
+
 (deftest send-notification-by-id-api-test
   (mt/with-temp [:model/Channel {http-channel-id :id} {:type    :channel/http
                                                        :details {:url         "https://metabase.com/testhttp"
@@ -574,8 +595,14 @@
         [notification {:card         {:collection_id (t2/select-one-pk :model/Collection :personal_owner_id (mt/user->id :rasta))}
                        :notification {:creator_id (mt/user->id :rasta)}}]
         (let [update!                     (fn [user-or-id expected-status]
+                                            ;; This test exercises card-view + subscription permissions, not owner
+                                            ;; reassignment. Drop creator_id from the body — otherwise the stale value
+                                            ;; left over after change-notification-creator would read as a (forbidden,
+                                            ;; non-superuser) reassignment and 400 before the permission checks run.
                                             (mt/user-http-request user-or-id :put expected-status (format "notification/%d" (:id notification))
-                                                                  (assoc notification :updated_at (t/offset-date-time))))
+                                                                  (-> notification
+                                                                      (dissoc :creator_id)
+                                                                      (assoc :updated_at (t/offset-date-time)))))
               change-notification-creator (fn [user-id]
                                             ;; :model/Notification prevents updating creator_id, so we need to use table
                                             ;; name
@@ -651,7 +678,7 @@
           [:model/Collection {collection-id :id} {:personal_owner_id (:id user)}
            :model/Card {card-id :id} {:collection_id collection-id}]
           (let [create-notification! (fn [user-or-id expected-status]
-                                       (with-redefs [notification/send-notification! (fn [& _args] :done)]
+                                       (mt/with-dynamic-fn-redefs [notification/send-notification! (fn [& _args] :done)]
                                          (mt/user-http-request user-or-id :post expected-status "notification/send"
                                                                {:payload_type  "notification/card"
                                                                 :creator_id    (mt/user->id :rasta)

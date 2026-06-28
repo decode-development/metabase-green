@@ -5,6 +5,7 @@
    [metabase.analytics.core :as analytics.core]
    [metabase.lib-be.core :as lib-be]
    [metabase.search.config :as search.config]
+   [metabase.search.debug :as search.debug]
    [metabase.search.engine :as search.engine]
    [metabase.search.impl :as search.impl]
    [metabase.search.ingestion :as search.ingestion]
@@ -25,6 +26,11 @@
 (p/import-vars
  [search.config
   SearchableModel]
+<<<<<<< HEAD
+=======
+ [search.debug
+  diagnose]
+>>>>>>> v0.62.3
  [search.engine
   model-set]
  [search.impl

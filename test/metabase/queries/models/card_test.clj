@@ -1,4 +1,5 @@
 (ns metabase.queries.models.card-test
+  {:clj-kondo/config '{:linters {:deprecated-var {:exclude {metabase.test.data/mbql-query {:namespaces [metabase.queries.models.card-test]}}}}}}
   (:require
    [clojure.set :as set]
    [clojure.test :refer :all]
@@ -156,8 +157,8 @@
       (testing "should not attempt to delete if it's not a model"
         (mt/with-temp [:model/Card {id :id} {:type          :question
                                              :dataset_query (mt/mbql-query users)}]
-          (with-redefs [card/disable-implicit-action-for-model! (fn [& _args]
-                                                                  (throw (ex-info "Should not be called" {})))]
+          (mt/with-dynamic-fn-redefs [card/disable-implicit-action-for-model! (fn [& _args]
+                                                                                (throw (ex-info "Should not be called" {})))]
             (is (= 1 (t2/update! :model/Card :id id {:dataset_query (mt/mbql-query users {:limit 1})})))))))))
 
 (deftest disable-implicit-actions-if-needed-test-3
@@ -955,7 +956,7 @@
     (mt/with-premium-features #{}
       (mt/with-temp [:model/Collection collection {}
                      :model/Card       card       {:collection_id (:id collection)}]
-        (with-redefs [audit/default-audit-collection (constantly collection)]
+        (mt/with-dynamic-fn-redefs [audit/default-audit-collection (constantly collection)]
           (mt/with-test-user :rasta
             (is (false? (mi/can-read? card)))
             (is (false? (mi/can-write? card))))
@@ -1242,6 +1243,34 @@
                     {:id (mt/user->id :rasta)})]
           (is (some? card))
           (is (= remote-synced-coll-id (:collection_id card))))))))
+
+(defn- malformed-native-dataset-query
+  "See [[metabase.queries-rest.api.card-test/malformed-native-dataset-query]]."
+  []
+  {:type     :native
+   :database (mt/id)
+   :native   {:query         "SELECT COUNT(*) FROM ORDERS WHERE {{df}}"
+              :template-tags {"df" {:id           (str (random-uuid))
+                                    :name         "df"
+                                    :display-name "DF"
+                                    :type         :dimension
+                                    :widget-type  :date/range
+                                    :dimension    [:field
+                                                   {:base-type :type/DateTime}
+                                                   (mt/id :orders :created_at)]}}}})
+
+(deftest create-card!-with-malformed-dataset-query-throws-test
+  (testing "queries/create-card! with structurally malformed :dataset_query throws a normalization error, not a SQL constraint error (#74615)"
+    (mt/with-model-cleanup [:model/Card]
+      (is (thrown-with-msg?
+           Throwable
+           #"(?i)normaliz|MBQL"
+           (card/create-card!
+            {:name                   "Bad card"
+             :display                "table"
+             :visualization_settings {}
+             :dataset_query          (malformed-native-dataset-query)}
+            {:id (mt/user->id :rasta)}))))))
 
 (deftest update-card-remote-synced-collection-non-remote-synced-deps-test
   (testing "update-card! should throw exception when moving to remote-synced collection with non-remote-synced dependencies"

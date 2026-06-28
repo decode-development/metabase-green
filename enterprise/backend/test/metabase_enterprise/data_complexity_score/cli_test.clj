@@ -77,11 +77,23 @@
                 :synonym-threshold 0.8
                 :weights           complexity/weights
                 :metabot-source    :universe-fallback}
+<<<<<<< HEAD
                (:meta result))))))
   (testing "the schema-less widgets table (under databases/<db>/tables/, no schema dir) loads into :universe"
     (let [{:keys [universe]} (representation/load-dir representation-fixture-dir)]
       (is (some #(= "widgets" (:name %)) universe)
           "schema-less Table directory should be picked up by the loader")))
+=======
+               (:meta result)))))))
+
+(deftest ^:parallel representation-fixture-scores-deterministically-test-2
+  (testing "the schema-less widgets table (under databases/<db>/tables/, no schema dir) loads into :universe"
+    (let [{:keys [universe]} (representation/load-dir representation-fixture-dir)]
+      (is (some #(= "widgets" (:name %)) universe)
+          "schema-less Table directory should be picked up by the loader"))))
+
+(deftest ^:parallel representation-fixture-scores-deterministically-test-3
+>>>>>>> v0.62.3
   (testing "audit-DB content (is_audit: true) is excluded from :universe — both Tables and Cards"
     ;; Mirrors the live appdb scorer's `[:not= audit/audit-db-id]` filter. The fixture has
     ;; `databases/audit_database/...` (`is_audit: true`) with a `query_log` Table and a
@@ -92,7 +104,13 @@
       (is (not (contains? names "query_log"))
           "Table in is_audit DB must not appear in :universe")
       (is (not (contains? names "Audit Metric"))
+<<<<<<< HEAD
           "Card whose database_id is the audit DB must not appear in :universe")))
+=======
+          "Card whose database_id is the audit DB must not appear in :universe"))))
+
+(deftest ^:parallel representation-fixture-scores-deterministically-test-4
+>>>>>>> v0.62.3
   (testing "FieldValues side-car YAMLs (`*___fieldvalues.yaml`) under fields/ do not inflate :field-count"
     ;; The fixture's `events/fields/event_id___fieldvalues.yaml` is a real-shape serdes side-car
     ;; sitting next to a Field YAML. `load-yamls-of-model` must skip it; otherwise the events Table
@@ -102,7 +120,11 @@
       (is (= 2 (:field-count events))
           "events Table should have exactly 2 fields — the side-car must not be counted"))))
 
+<<<<<<< HEAD
 (deftest ^:sequential run-cli-writes-readable-edn-to-output-file-test
+=======
+(deftest ^:sequential run-cli-writes-readable-json-test
+>>>>>>> v0.62.3
   ;; Not ^:parallel: calls `cli/write-result!`, which kondo flags as a destructive function in
   ;; parallel tests. The temp file we hand it is unique-per-call so the write is safe in
   ;; principle, but the lint flag is the right default — drop it instead of whitelisting.
@@ -348,6 +370,7 @@
             "representation-derived rows must never advance the cron's last-fingerprint setting")))))
 
 (deftest ^:sequential run-cli-appdb-mode-defaults-to-writing-test
+<<<<<<< HEAD
   (testing "appdb mode with no --write-to-appdb flag defaults to writing (true)"
     (let [calls         (atom [])
           advance-calls (atom [])]
@@ -369,17 +392,49 @@
 (deftest ^:sequential run-cli-appdb-mode-respects-explicit-no-write-test
   (testing "appdb + --write-to-appdb false scores but never persists or advances the fingerprint"
     (let [persisted?    (atom false)
+=======
+  (testing "appdb mode with no --write-to-appdb flag defaults to writing (true) but doesn't advance the cron fingerprint"
+    ;; CLI runs disable Snowplow, so they can't legitimately advance
+    ;; `data-complexity-scoring-last-fingerprint` — that setting is the cron's
+    ;; been-published-already gate and only a confirmed publish should move it. The CLI just
+    ;; persists the score row so operators can see the run.
+    (let [calls         (atom [])
+>>>>>>> v0.62.3
           advance-calls (atom 0)]
       (mt/with-dynamic-fn-redefs [mdb/setup-db-without-migrations!                (fn [])
                                   complexity/complexity-scores                    (fn [& _] {:meta {}})
                                   synonym-source/complexity-scores-opts           (constantly {})
                                   metabot-scope/internal-metabot-scope            (constantly {})
+<<<<<<< HEAD
                                   data-complexity-score/record-score!             (fn [& _] (reset! persisted? true))
                                   task.complexity-score/maybe-advance-last-fingerprint! (fn [& _]
                                                                                           (swap! advance-calls inc))]
         (#'cli/run-cli {:source "appdb" :write-to-appdb false})
         (is (false? @persisted?))
         (is (zero? @advance-calls))))))
+=======
+                                  task.complexity-score/current-fingerprint       (constantly "appdb-fp")
+                                  task.complexity-score/maybe-advance-last-fingerprint! (fn [& _]
+                                                                                          (swap! advance-calls inc))
+                                  data-complexity-score/record-score!             (fn [fp source _result]
+                                                                                    (swap! calls conj [fp source]))]
+        (#'cli/run-cli {:source "appdb"})
+        (is (= [["appdb-fp" "appdb"]] @calls)
+            "appdb-mode default must write one row stamped source=\"appdb\"")
+        (is (zero? @advance-calls)
+            "CLI must not advance the cron's last-fingerprint setting")))))
+
+(deftest ^:sequential run-cli-appdb-mode-respects-explicit-no-write-test
+  (testing "appdb + --write-to-appdb false scores but never persists"
+    (let [persisted? (atom false)]
+      (mt/with-dynamic-fn-redefs [mdb/setup-db-without-migrations!                (fn [])
+                                  complexity/complexity-scores                    (fn [& _] {:meta {}})
+                                  synonym-source/complexity-scores-opts           (constantly {})
+                                  metabot-scope/internal-metabot-scope            (constantly {})
+                                  data-complexity-score/record-score!             (fn [& _] (reset! persisted? true))]
+        (#'cli/run-cli {:source "appdb" :write-to-appdb false})
+        (is (false? @persisted?))))))
+>>>>>>> v0.62.3
 
 (deftest ^:parallel dir-digest-is-stable-and-content-sensitive-test
   (testing "dir-digest produces the same value for the same content"

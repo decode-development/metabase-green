@@ -1,3 +1,5 @@
+import type { IconName } from "metabase-types/api";
+
 import ten_thousand_component from "./10k.svg?component";
 import ten_thousand_source from "./10k.svg?source";
 import one_million_component from "./1m.svg?component";
@@ -152,6 +154,8 @@ import database_routing_component from "./database_routing.svg?component";
 import database_routing_source from "./database_routing.svg?source";
 import dependencies_component from "./dependencies.svg?component";
 import dependencies_source from "./dependencies.svg?source";
+import dependent_component from "./dependent.svg?component";
+import dependent_source from "./dependent.svg?source";
 import document_component from "./document.svg?component";
 import document_source from "./document.svg?source";
 import download_component from "./download.svg?component";
@@ -560,6 +564,8 @@ import view_archive_component from "./view_archive.svg?component";
 import view_archive_source from "./view_archive.svg?source";
 import warning_component from "./warning.svg?component";
 import warning_source from "./warning.svg?source";
+import warning_round_component from "./warning_round.svg?component";
+import warning_round_source from "./warning_round.svg?source";
 import warning_round_filled_component from "./warning_round_filled.svg?component";
 import warning_round_filled_source from "./warning_round_filled.svg?source";
 import warning_triangle_filled_component from "./warning_triangle_filled.svg?component";
@@ -852,6 +858,10 @@ export const Icons: Record<IconName, { component: React.VFC; source: string }> =
     dependencies: {
       component: dependencies_component,
       source: dependencies_source,
+    },
+    dependent: {
+      component: dependent_component,
+      source: dependent_source,
     },
     data_studio: {
       component: data_studio_component,
@@ -1687,6 +1697,10 @@ export const Icons: Record<IconName, { component: React.VFC; source: string }> =
       component: warning_component,
       source: warning_source,
     },
+    warning_round: {
+      component: warning_round_component,
+      source: warning_round_source,
+    },
     warning_round_filled: {
       component: warning_round_filled_component,
       source: warning_round_filled_source,
@@ -1739,6 +1753,7 @@ export const Icons: Record<IconName, { component: React.VFC; source: string }> =
     eye_filled: { component: eye_component, source: eye_source },
   };
 
+<<<<<<< HEAD
 /**
  * We need a standalone type to prevent adding the `Icons` object (as a type) into `index.d.ts` of Embedding SDK dist
  */
@@ -2038,6 +2053,8 @@ export type IconName =
   | "test_tube"
   | "eye_filled";
 
+=======
+>>>>>>> v0.62.3
 export const iconNames = Object.keys(Icons) as unknown as IconName[];
 
 export const isValidIconName = (name: unknown): name is IconName =>

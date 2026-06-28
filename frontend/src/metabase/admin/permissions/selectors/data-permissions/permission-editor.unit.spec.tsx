@@ -115,6 +115,7 @@ describe("getShouldShowTransformPermissions", () => {
 
 describe("getDatabasesPermissionEditor", () => {
   it("does not crash when the selected group has no member count (#74290)", () => {
+<<<<<<< HEAD
     const groupWithoutMemberCount = {
       ...createMockGroup({
         id: 1,
@@ -123,6 +124,13 @@ describe("getDatabasesPermissionEditor", () => {
       }),
       members: [],
     };
+=======
+    const groupWithoutMemberCount = createMockGroup({
+      id: 1,
+      name: "All Users",
+      magic_group_type: "all-internal-users",
+    });
+>>>>>>> v0.62.3
     Reflect.deleteProperty(groupWithoutMemberCount, "member_count");
 
     const permissions: GroupsPermissions = {
@@ -142,6 +150,7 @@ describe("getDatabasesPermissionEditor", () => {
           originalDataPermissions: permissions,
         }),
       }),
+<<<<<<< HEAD
       entities: {
         ...createMockEntitiesState({
           databases: [
@@ -169,6 +178,25 @@ describe("getDatabasesPermissionEditor", () => {
           },
         },
       },
+=======
+      entities: createMockEntitiesState({
+        databases: [
+          createMockDatabase({
+            id: 3,
+            name: "Test Database",
+            tables: [
+              createMockTable({
+                id: 10,
+                db_id: 3,
+                display_name: "People",
+                schema: "public",
+              }),
+            ],
+          }),
+        ],
+        schemas: [createMockSchema({ id: "3:public", name: "public" })],
+      }),
+>>>>>>> v0.62.3
       "metabase-api": {
         ...createMockApiState(),
         queries: {

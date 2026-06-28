@@ -92,8 +92,13 @@ const setup = ({
   renderWithProviders(
     <Route
       path={path}
+<<<<<<< HEAD
       component={() => (
         <TransformsSectionLayout>
+=======
+      component={(props) => (
+        <TransformsSectionLayout {...props}>
+>>>>>>> v0.62.3
           <div>List of transforms</div>
         </TransformsSectionLayout>
       )}
@@ -273,9 +278,13 @@ describe("TransformSectionLayout", () => {
 
       expect(await screen.findByText(/error/i)).toBeInTheDocument();
       expect(
+<<<<<<< HEAD
         screen.queryByText(
           "To use transforms, you need a writable database connection",
         ),
+=======
+        screen.queryByText("No compatible database connection"),
+>>>>>>> v0.62.3
       ).not.toBeInTheDocument();
     });
   });
@@ -290,7 +299,11 @@ const assertEnableScreen = async () =>
 
 const assertNoWritableDatabasesEmptyState = async () =>
   expect(
+<<<<<<< HEAD
     await screen.findByText(
       "To use transforms, you need a writable database connection",
     ),
+=======
+    await screen.findByText("No compatible database connection"),
+>>>>>>> v0.62.3
   ).toBeInTheDocument();
