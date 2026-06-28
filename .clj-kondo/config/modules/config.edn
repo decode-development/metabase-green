@@ -160,13 +160,8 @@
               metabase.agent-api.init}
    :uses    #{api
               auth-identity
-<<<<<<< HEAD
-              collections
-||||||| 0a60f2436f
-=======
               channel
               collections
->>>>>>> v0.62.1
               dashboards
               events
               lib
