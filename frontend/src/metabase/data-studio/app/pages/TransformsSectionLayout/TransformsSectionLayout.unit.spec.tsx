@@ -92,8 +92,8 @@ const setup = ({
   renderWithProviders(
     <Route
       path={path}
-      component={(props) => (
-        <TransformsSectionLayout {...props}>
+      component={() => (
+        <TransformsSectionLayout>
           <div>List of transforms</div>
         </TransformsSectionLayout>
       )}

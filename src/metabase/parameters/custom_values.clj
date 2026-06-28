@@ -8,7 +8,6 @@
   (:require
    [clojure.string :as str]
    [medley.core :as m]
-   [metabase.lib-be.core :as lib-be]
    [metabase.lib.core :as lib]
    [metabase.lib.metadata :as lib.metadata]
    [metabase.lib.schema :as lib.schema]
@@ -17,6 +16,7 @@
    [metabase.models.interface :as mi]
    [metabase.parameters.schema :as parameters.schema]
    [metabase.query-processor :as qp]
+   [metabase.query-processor.util :as qp.util]
    [metabase.util :as u]
    [metabase.util.i18n :refer [tru]]
    [metabase.util.log :as log]
@@ -75,39 +75,29 @@
    ;; remapped label for a single selected value)
    [:exact-value {:optional true} :any]])
 
-(mu/defn- card-query :- [:maybe ::lib.schema/query]
-  "Build the lib query for the value-source Card identified by `card-id`. `query` is the Card's own `:dataset_query`,
-  which is metadata-providerable, so we resolve the Card as a Lib `:metadata/card` through it. Bulk-loads the metadata
-  it references up front so the column resolution that follows ([[lib/visible-columns]] etc.) hits the provider cache
-  instead of fetching one entity at a time."
-  [card-id :- ::lib.schema.id/card
-   query   :- [:maybe ::lib.schema/query]]
-  (when (seq query)
-    (let [value-source-query (lib/query query (lib.metadata/card query card-id))]
-      (lib-be/bulk-load-query-metadata! query
-                                        (lib/all-referenced-entity-ids [value-source-query]
-                                                                       {:include-implicitly-joinable? true}))
-      value-source-query)))
-
 (mu/defn- values-from-card-query :- [:maybe ::lib.schema/query]
-  [query     :- [:maybe ::lib.schema/query]
-   field-ref :- [:or :mbql.clause/field :mbql.clause/expression]
+  [{query :dataset_query, :keys [id], :as _card} :- [:and
+                                                     :metabase.queries.schema/card
+                                                     [:map
+                                                      [:id ::lib.schema.id/card]]]
+   field-ref                                    :- [:or :mbql.clause/field :mbql.clause/expression]
    {:keys [query-string label-field exact-value] :as _opts} :- [:maybe ::values-from-card-query.options]]
-  (when query
-    (let [card-id (lib/primary-source-card-id query)]
+  (when (seq query)
+    ;; start a new query using this Card as a starting point
+    (let [query (lib/query query (lib.metadata/card query id))]
       (when-let [visible-columns (or (not-empty (lib/visible-columns query))
                                      (log/warnf "Cannot get values from Card %d: Card query has no visible columns"
-                                                card-id))]
+                                                id))]
         (when-let [value-column (or (lib/find-matching-column query -1 field-ref visible-columns)
                                     (log/warnf "Cannot get values from Card %d: failed to find column for ref %s\nFound: %s"
-                                               card-id
+                                               id
                                                (pr-str field-ref)
                                                (pr-str (map (some-fn :lib/source-column-alias :name) visible-columns))))]
-          (let [label-column    (when label-field
-                                  (or (lib/find-matching-column query -1 label-field visible-columns)
-                                      (log/warnf "Cannot get labels from Card %d: failed to find column for ref %s"
-                                                 card-id
-                                                 (pr-str label-field))))
+          (let [label-column   (when label-field
+                                 (or (lib/find-matching-column query -1 label-field visible-columns)
+                                     (log/warnf "Cannot get labels from Card %d: failed to find column for ref %s"
+                                                id
+                                                (pr-str label-field))))
                 search-column   (or label-column value-column)
                 value-textual?  (lib.types.isa/string? value-column)
                 search-textual? (lib.types.isa/string? search-column)
@@ -138,19 +128,6 @@
       (let [keep-idxs (into [] (keep-indexed (fn [i c] (when-not (drop-names (:name c)) i))) cols)]
         (perf/mapv (fn [row] (perf/mapv #(nth row %) keep-idxs)) rows)))))
 
-(mu/defn- values-from-card* :- ms/FieldValuesResult
-  "Core of [[values-from-card]], working off a prebuilt value-source `query`."
-  [query     :- [:maybe ::lib.schema/query]
-   field-ref :- [:or :mbql.clause/field :mbql.clause/expression]
-   opts      :- [:maybe ::values-from-card-query.options]]
-  (let [mbql-query (values-from-card-query query field-ref opts)
-        result     (some-> mbql-query qp/process-query)
-        values     (some-> result result->rows)]
-    {:values          (or values [])
-     ;; If the row_count returned = the limit we specified, then it's probably has more than that.
-     ;; If the query has its own limit smaller than *max-rows*, then there's no more values.
-     :has_more_values (= (:row_count result) *max-rows*)}))
-
 (mu/defn values-from-card
   "Get distinct values of a field from a card.
 
@@ -171,25 +148,32 @@
   ([card      :- :metabase.queries.schema/card
     field-ref :- [:or :mbql.clause/field :mbql.clause/expression]
     opts      :- [:maybe ::values-from-card-query.options]]
-   (values-from-card* (card-query (:id card) (not-empty (:dataset_query card))) field-ref opts)))
+   (let [mbql-query (values-from-card-query card field-ref opts)
+         result     (some-> mbql-query qp/process-query)
+         values     (some-> result result->rows)]
+     {:values          (or values [])
+      ;; If the row_count returned = the limit we specified, then it's probably has more than that.
+      ;; If the query has its own limit smaller than *max-rows*, then there's no more values.
+      :has_more_values (= (:row_count result) *max-rows*)})))
+
+(mu/defn card-values
+  "Given a param and query returns the values."
+  [{config :values_source_config :as _param} :- ::parameters.schema/parameter
+   query-string                              :- [:maybe ms/NonBlankString]]
+  (let [card-id (:card_id config)
+        card    (t2/select-one :model/Card :id card-id)]
+    (values-from-card card
+                      (lib/->mbql5 (:value_field config))
+                      (cond-> {:query-string query-string}
+                        (:label_field config) (assoc :label-field (lib/->mbql5 (:label_field config)))))))
 
 (defn- can-get-card-values?
-  "Whether the prebuilt value-source `query` exposes the `value-field` column."
-  [query value-field]
+  [card value-field]
   (boolean
-   (and query
-        (some? (lib/find-matching-column query -1 (lib/->mbql5 value-field)
-                                         (lib/visible-columns query))))))
-
-(mu/defn- card-values :- ms/FieldValuesResult
-  "Given a prebuilt value-source `query`, the parameter's `config`, and a `query-string`, return the values."
-  [query        :- [:maybe ::lib.schema/query]
-   config       :- ::parameters.schema/values-source-config
-   query-string :- [:maybe ms/NonBlankString]]
-  (values-from-card* query
-                     (lib/->mbql5 (:value_field config))
-                     (cond-> {:query-string query-string}
-                       (:label_field config) (assoc :label-field (lib/->mbql5 (:label_field config))))))
+   (and (not (:archived card))
+        ;; existing usage -- do not use this in new code
+        #_{:clj-kondo/ignore [:deprecated-var]}
+        (some? (qp.util/field->field-info value-field (:result_metadata card))))))
 
 ;;; --------------------------------------------- Putting it together ----------------------------------------------
 
@@ -204,15 +188,12 @@
    default-case-thunk :- [:=> [:cat :any] ms/FieldValuesResult]]
   (case (:values_source_type parameter)
     :static-list (static-list-values parameter query-string)
-    :card        (let [config (:values_source_config parameter)
-                       card   (t2/select-one :model/Card :id (:card_id config))]
+    :card        (let [card (t2/select-one :model/Card :id (get-in parameter [:values_source_config :card_id]))]
                    (when-not (mi/can-read? card)
                      (throw (ex-info "You don't have permissions to do that." {:status-code 403})))
-                   (or (when-not (:archived card)
-                         (when-let [query (card-query (:id card) (not-empty (:dataset_query card)))]
-                           (when (can-get-card-values? query (:value_field config))
-                             (card-values query config query-string))))
-                       (default-case-thunk)))
+                   (if (can-get-card-values? card (get-in parameter [:values_source_config :value_field]))
+                     (card-values parameter query-string)
+                     (default-case-thunk)))
     nil          (default-case-thunk)
     (throw (ex-info (tru "Invalid parameter source {0}" (:values_source_type parameter))
                     {:status-code 400
@@ -256,13 +237,13 @@
   [{config :values_source_config :as _param} value]
   (when-let [label-field (:label_field config)]
     (when-let [card (t2/select-one :model/Card :id (:card_id config))]
-      (when (and (not (:archived card)) (mi/can-read? card))
-        (when-let [query (card-query (:id card) (not-empty (:dataset_query card)))]
-          (when (can-get-card-values? query (:value_field config))
-            (first (:values (values-from-card* query
-                                               (lib/->mbql5 (:value_field config))
-                                               {:exact-value value
-                                                :label-field (lib/->mbql5 label-field)})))))))))
+      (when (and (not (:archived card))
+                 (mi/can-read? card)
+                 (can-get-card-values? card (:value_field config)))
+        (first (:values (values-from-card card
+                                          (lib/->mbql5 (:value_field config))
+                                          {:exact-value value
+                                           :label-field (lib/->mbql5 label-field)})))))))
 
 (mu/defn parameter-remapped-value
   "Fetch the remapped value for the given `value` of parameter `param` with default values provided by

@@ -1,4 +1,5 @@
 (ns metabase-enterprise.serialization.v2.load-test
+  {:clj-kondo/config '{:linters {:deprecated-var {:exclude {metabase.test.data/mbql-query {:namespaces [metabase-enterprise.serialization.v2.load-test]}}}}}}
   (:require
    [clojure.string :as str]
    [clojure.test :refer :all]
@@ -8,10 +9,12 @@
    [metabase-enterprise.serialization.v2.ingest :as serdes.ingest]
    [metabase-enterprise.serialization.v2.load :as serdes.load]
    [metabase.actions.models :as action]
+   [metabase.collections.models.collection :as collection]
    [metabase.lib-be.core :as lib-be]
    [metabase.lib.core :as lib]
    [metabase.lib.metadata :as lib.metadata]
    [metabase.models.serialization :as serdes]
+   [metabase.permissions.core :as perms]
    [metabase.search.core :as search]
    [metabase.test :as mt]
    [metabase.util :as u]
@@ -267,6 +270,49 @@
                        :database (:id @db1d)}
                       (:dataset_query @card1d))))))))))
 
+(deftest card-with-unexported-table-and-field-test
+  (testing "a Card referencing a Table/Field absent from the bundle still loads by synthesizing inactive rows"
+    (let [serialized (atom nil)]
+      (ts/with-dbs [source-db dest-db]
+        (testing "serializing a database, table, field and a card that references them"
+          (ts/with-db source-db
+            (let [coll  (ts/create! :model/Collection :name "pop! minis")
+                  db    (ts/create! :model/Database :name "my-db")
+                  table (ts/create! :model/Table :name "customers" :db_id (:id db))
+                  field (ts/create! :model/Field :name "age" :table_id (:id table) :base_type :type/Integer)
+                  _user (ts/create! :model/User :first_name "Tom" :last_name "Scholz" :email "tom@bost.on")
+                  mp    (lib-be/application-database-metadata-provider (:id db))
+                  query (-> (lib/query mp (lib.metadata/table mp (:id table)))
+                            (lib/filter (lib/>= (lib.metadata/field mp (:id field)) 18))
+                            (lib/aggregate (lib/count)))]
+              (ts/create! :model/Card
+                          :database_id   (:id db)
+                          :table_id      (:id table)
+                          :collection_id (:id coll)
+                          :query_type    :query
+                          :name          "Example Card"
+                          :dataset_query query
+                          :display       :line)
+              (reset! serialized (into [] (remove #(#{"Table" "Field"} (-> % :serdes/meta last :model))
+                                                  (serdes.extract/extract {})))))))
+        (testing "the bundle has the Card but no Table/Field"
+          (is (seq (by-model @serialized "Card")))
+          (is (empty? (by-model @serialized "Table")))
+          (is (empty? (by-model @serialized "Field"))))
+        (testing "deserializing synthesizes inactive Table and Field for the dangling references"
+          (ts/with-db dest-db
+            (ts/create! :model/Database :name "my-db")
+            (serdes.load/load-metabase! (ingestion-in-memory @serialized))
+            (let [db    (t2/select-one :model/Database :name "my-db")
+                  table (t2/select-one :model/Table :name "customers" :db_id (:id db))
+                  field (and table (t2/select-one :model/Field :name "age" :table_id (:id table)))
+                  card  (t2/select-one :model/Card :name "Example Card")
+                  query (:dataset_query card)]
+              (is (=? {:active false} table))
+              (is (=? {:active false} field))
+              (is (= (:id db) (lib/database-id query)))
+              (is (= (:id table) (lib/primary-source-table-id query))))))))))
+
 (deftest segment-test
   ;; Segment.definition is a JSON-encoded MBQL query, which contain database, table, and field IDs - these need to be
   ;; converted to a portable form and read back in.
@@ -461,7 +507,6 @@
             (is (=? {:definition {:stages [{:aggregation [[:* {} [:measure {} (:entity_id @msr1s)] 2]]}]}}
                     derived-measure))
             (is (= #{[{:id "my-db", :model "Database"}]
-                     [{:id "my-db", :model "Database"} {:id "sales", :model "Table"}]
                      [{:id (:entity_id @msr1s), :model "Measure"}]}
                    (serdes/mbql-deps (:definition derived-measure))))))
         (testing "deserializing adjusts the measure IDs properly"
@@ -1976,55 +2021,6 @@
                 (is (some? transform))
                 (is (= (:id db) (:source_database_id transform)))))))))))
 
-(deftest transform-with-deleted-source-database-load-test
-  (testing "An orphaned transform (source database was deleted before export) round-trips through serdes as a tombstone (GDGT-2447)"
-    (mt/with-premium-features #{:transforms-basic}
-      (let [serialized (atom nil)]
-        (ts/with-dbs [source-db dest-db]
-          (ts/with-db source-db
-            (t2/delete! :model/TransformTag)
-            (let [db    (ts/create! :model/Database :name "soon-to-be-deleted")
-                  table (ts/create! :model/Table :name "customers" :db_id (:id db))
-                  coll  (ts/create! :model/Collection :name "Transform Collection" :namespace :transforms)
-                  _     (ts/create! :model/Transform
-                                    :name "Orphan Transform"
-                                    :description "Transform whose source DB will be deleted"
-                                    :collection_id (:id coll)
-                                    :source {:query (mbql5-query (:id db) (:id table))
-                                             :type "query"}
-                                    :target {:database (:id db)
-                                             :type "table"
-                                             :schema "public"
-                                             :name "orphan_target"})]
-              ;; Deleting the database cascade-SET-NULLs source_database_id (FK action)
-              ;; AND cascade-deletes the Table (Field FKs) — the transform survives as a tombstone.
-              (t2/delete! :model/Database :name "soon-to-be-deleted")
-              (reset! serialized (into [] (serdes.extract/extract {})))))
-          (let [minimal (mapv (fn [entity]
-                                (if (= "Transform" (-> entity :serdes/meta last :model))
-                                  (select-keys entity [:serdes/meta :entity_id :name
-                                                       :source :target])
-                                  entity))
-                              @serialized)]
-            (testing "the extracted transform carries the :serdes/unresolved flag and verbatim body"
-              (let [extracted (first (filter #(= "Transform" (-> % :serdes/meta last :model)) minimal))]
-                (is (some? extracted))
-                (is (true? (get-in extracted [:source :serdes/unresolved])))
-                ;; native query text is preserved verbatim
-                (is (some? (get-in extracted [:source :query])))))
-            (ts/with-db dest-db
-              (t2/delete! :model/TransformTag)
-              (serdes.load/load-metabase! (ingestion-in-memory minimal))
-              (let [transform (t2/select-one :model/Transform :name "Orphan Transform")]
-                (testing "transform round-trips and ends up as a tombstone in the destination instance"
-                  (is (some? transform))
-                  (is (nil? (:source_database_id transform))
-                      "source_database_id should be nil — there's no DB to bind to")
-                  (is (not (contains? (:source transform) :serdes/unresolved))
-                      "the :serdes/unresolved marker should have been stripped on import")
-                  (is (some? (get-in transform [:source :query]))
-                      "the query body should be preserved as a breadcrumb"))))))))))
-
 (deftest table-created-by-transform-load-test
   (testing "Table created by a Transform can be imported via serialization (GDGT-2444)"
     (mt/with-premium-features #{:transforms-basic}
@@ -2042,14 +2038,12 @@
                                         :target {:database (:id db)
                                                  :type "table"
                                                  :schema "public"
-                                                 :name "hello_transforms_world"})
-                  ;; Transform's before-insert (pre-#73741) already inserted the
-                  ;; metabase_table row via upsert-target-table!; adopt that row.
-                  table-id  (t2/select-one-pk :model/Table
-                                              :db_id (:id db)
-                                              :schema "public"
-                                              :name "hello_transforms_world")]
-              (t2/update! :model/Table table-id {:transform_id (:id transform), :active true})
+                                                 :name "hello_transforms_world"})]
+              (ts/create! :model/Table
+                          :name "hello_transforms_world"
+                          :db_id (:id db)
+                          :schema "public"
+                          :transform_id (:id transform))
               (reset! serialized (into [] (serdes.extract/extract {})))))
           (ts/with-db dest-db
             (t2/delete! :model/TransformTag)
@@ -2378,3 +2372,108 @@
                 card-ser   (first (filter #(= "Card" (-> % :serdes/meta last :model)) serialized))]
             (is (not (contains? card-ser :table_id))    "table_id always skipped for cards — re-derived on import")
             (is (contains? card-ser :database_id) "database_id exported — not derivable from broken query")))))))
+
+(deftest library-subcollection-round-trip-test
+  (testing "Library subcollection structure and types are preserved through serdes round-trip"
+    (let [serialized (atom nil)
+          library    (atom nil)
+          data-root  (atom nil)
+          metrics-root (atom nil)
+          data-sub   (atom nil)]
+      (ts/with-dbs [source-db dest-db]
+        (testing "extraction of library hierarchy"
+          (ts/with-db source-db
+            (reset! library      (ts/create! :model/Collection
+                                             :name      "Library"
+                                             :type      collection/library-collection-type
+                                             :location  "/"
+                                             :entity_id @#'collection/library-entity-id))
+            (reset! data-root    (ts/create! :model/Collection
+                                             :name      "Data"
+                                             :type      collection/library-data-collection-type
+                                             :location  (format "/%d/" (:id @library))
+                                             :entity_id @#'collection/library-data-entity-id))
+            (reset! metrics-root (ts/create! :model/Collection
+                                             :name      "Metrics"
+                                             :type      collection/library-metrics-collection-type
+                                             :location  (format "/%d/" (:id @library))
+                                             :entity_id @#'collection/library-metrics-entity-id))
+            (reset! data-sub     (ts/create! :model/Collection
+                                             :name     "Sales Tables"
+                                             :type     collection/library-data-collection-type
+                                             :location (format "/%d/%d/" (:id @library) (:id @data-root))))
+            (reset! serialized (into [] (serdes.extract/extract {})))
+            (is (some (fn [{[{:keys [model id]}] :serdes/meta}]
+                        (and (= model "Collection") (= id (:entity_id @library))))
+                      @serialized))))
+        (testing "loading into destination preserves library structure"
+          (ts/with-db dest-db
+            (serdes.load/load-metabase! (ingestion-in-memory @serialized))
+            (let [lib-dest     (t2/select-one :model/Collection :entity_id (:entity_id @library))
+                  data-dest    (t2/select-one :model/Collection :entity_id (:entity_id @data-root))
+                  metrics-dest (t2/select-one :model/Collection :entity_id (:entity_id @metrics-root))
+                  sub-dest     (t2/select-one :model/Collection :entity_id (:entity_id @data-sub))]
+              (testing "all collections exist"
+                (is (some? lib-dest))
+                (is (some? data-dest))
+                (is (some? metrics-dest))
+                (is (some? sub-dest)))
+              (testing "types are preserved"
+                (is (= collection/library-collection-type (:type lib-dest)))
+                (is (= collection/library-data-collection-type (:type data-dest)))
+                (is (= collection/library-metrics-collection-type (:type metrics-dest)))
+                (is (= collection/library-data-collection-type (:type sub-dest))))
+              (testing "parent-child hierarchy is correct"
+                (is (= "/" (:location lib-dest)))
+                (is (= (format "/%d/" (:id lib-dest)) (:location data-dest)))
+                (is (= (format "/%d/" (:id lib-dest)) (:location metrics-dest)))
+                (is (= (format "/%d/%d/" (:id lib-dest) (:id data-dest)) (:location sub-dest)))))))))))
+
+(deftest library-import-preserves-existing-permissions-test
+  (testing "Importing library subcollections does not overwrite existing permissions on destination"
+    (let [serialized (atom nil)
+          eid-data   "testdataeid0000000000"
+          eid-sub    "testsubeid00000000000"]
+      (ts/with-dbs [source-db dest-db]
+        (testing "extract from source"
+          (ts/with-db source-db
+            (let [data-coll (ts/create! :model/Collection
+                                        :name      "Data"
+                                        :type      collection/library-data-collection-type
+                                        :location  "/"
+                                        :entity_id eid-data)
+                  _sub-coll (ts/create! :model/Collection
+                                        :name     "Sales Tables"
+                                        :type     collection/library-data-collection-type
+                                        :location (format "/%d/" (:id data-coll))
+                                        :entity_id eid-sub)]
+              (reset! serialized (into [] (serdes.extract/extract {}))))))
+        (testing "pre-populate dest with same collections and custom permissions"
+          (ts/with-db dest-db
+            (let [data-dest (ts/create! :model/Collection
+                                        :name      "Data"
+                                        :type      collection/library-data-collection-type
+                                        :location  "/"
+                                        :entity_id eid-data)
+                  sub-dest  (ts/create! :model/Collection
+                                        :name     "Sales Tables"
+                                        :type     collection/library-data-collection-type
+                                        :location (format "/%d/" (:id data-dest))
+                                        :entity_id eid-sub)
+                  group     (ts/create! :model/PermissionsGroup :name "Custom Group")]
+              (perms/grant-collection-readwrite-permissions! group data-dest)
+              (perms/grant-collection-read-permissions! group sub-dest)
+              (let [perms-before (set (map #(select-keys % [:group_id :object])
+                                           (t2/select :model/Permissions
+                                                      :object [:like (format "/collection/%d/%%" (:id data-dest))])))]
+                (testing "custom permissions exist before import"
+                  (is (seq perms-before)))
+                (serdes.load/load-metabase! (ingestion-in-memory @serialized))
+                (let [data-after (t2/select-one :model/Collection :entity_id eid-data)
+                      perms-after (set (map #(select-keys % [:group_id :object])
+                                            (t2/select :model/Permissions
+                                                       :object [:like (format "/collection/%d/%%" (:id data-after))])))]
+                  (testing "collection still exists with same ID"
+                    (is (= (:id data-dest) (:id data-after))))
+                  (testing "permissions are unchanged after import"
+                    (is (= perms-before perms-after))))))))))))

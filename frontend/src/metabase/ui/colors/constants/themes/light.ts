@@ -36,9 +36,14 @@ export const METABASE_LIGHT_THEME: MetabaseThemeV2 = {
     "background-error": baseColors.lobster[10],
     "background-success": baseColors.palm[5],
 <<<<<<< HEAD
+<<<<<<< HEAD
     brand: "#135756",
 =======
     "background-success-secondary": baseColors.palm[20],
+||||||| 0a60f2436f
+=======
+    "background-success-secondary": baseColors.palm[20],
+>>>>>>> v0.62.1
     brand: baseColors.blue[40],
 >>>>>>> v0.61.3
     "brand-hover": baseColors.brand[50],
@@ -81,9 +86,18 @@ export const METABASE_LIGHT_THEME: MetabaseThemeV2 = {
     "tooltip-background": baseColors.orion[80],
     "tooltip-text-secondary": baseColors.orionAlphaInverse[60],
     "tooltip-text": baseColors.white,
+<<<<<<< HEAD
     warning: "#E2B018",
     "background-warning": "#FDF0C8",
     "background-warning-secondary": "color-mix(in srgb, #E2B018, white 70%)",
+||||||| 0a60f2436f
+    warning: baseColors.dubloon[30],
+    "background-warning": baseColors.dubloon[5],
+=======
+    warning: baseColors.dubloon[30],
+    "background-warning": baseColors.dubloon[5],
+    "background-warning-secondary": baseColors.dubloon[20],
+>>>>>>> v0.62.1
     info: baseColors.orion[40],
     "background-info": baseColors.orion[10],
     white: baseColors.white,

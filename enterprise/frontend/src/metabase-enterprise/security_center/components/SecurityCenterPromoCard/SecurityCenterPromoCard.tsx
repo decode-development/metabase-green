@@ -1,4 +1,3 @@
-import { skipToken } from "@reduxjs/toolkit/query/react";
 import { useCallback, useState } from "react";
 import { t } from "ttag";
 
@@ -9,8 +8,6 @@ import {
 import { useSetting } from "metabase/common/hooks";
 import { getPlan } from "metabase/common/utils/plan";
 import { NavbarPromoCard } from "metabase/nav/components/NavbarPromoCard";
-import { useSelector } from "metabase/redux";
-import { getUserIsAdmin } from "metabase/selectors/user";
 import { Icon } from "metabase/ui";
 
 import { isAffected } from "../../utils";
@@ -31,19 +28,13 @@ function useDismissed() {
 }
 
 export function SecurityCenterPromoCard() {
-  const isAdmin = useSelector(getUserIsAdmin);
   const tokenFeatures = useSetting("token-features");
   const plan = getPlan(tokenFeatures);
   const { data: channelInfo, isLoading: isChannelInfoLoading } =
-    useGetChannelInfoQuery(isAdmin ? undefined : skipToken);
+    useGetChannelInfoQuery();
   const { data: advisoriesResponse, isLoading: isAdvisoriesLoading } =
-    useListSecurityAdvisoriesQuery(isAdmin ? undefined : skipToken);
+    useListSecurityAdvisoriesQuery();
   const { dismissed, dismiss } = useDismissed();
-
-  // The promo links to /admin/security-center, so only admins should see it.
-  if (!isAdmin) {
-    return null;
-  }
 
   if (plan !== "pro-self-hosted") {
     return null;
